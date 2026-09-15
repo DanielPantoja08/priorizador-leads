@@ -1,8 +1,14 @@
 # PRD — Priorizador Diario de Leads
 
 **Proyecto:** Assessment técnico, Analista de IA — Gerencia de IA y Transformación
-**Versión:** 1.1 · **Estado:** Aprobado para desarrollo · **Fecha:** septiembre de 2026
+**Versión:** 1.2 · **Estado:** Aprobado para desarrollo · **Fecha:** septiembre de 2026
 **Documentos complementarios:** [TRD.md](./TRD.md) (cómo se construye) · [EDA.md](./EDA.md) (evidencia de los datos, se genera en la Fase A)
+
+**Cambios frente a la versión 1.1 (ajustes según el EDA)**
+- La velocidad de contacto separa 3,6 veces, no 3,5: la cifra anterior estaba truncada.
+- El AUC de los modelos simples queda en el rango de 0,55 a 0,60 (antes decía 0,56 a 0,60).
+- Se documenta el método del 55 % de leads sin contacto en 24 h: las fechas con precisión de día se leen como 00:00.
+- HU-02 muestra si el modelo de interés está disponible en el punto de venta del lead.
 
 **Cambios frente a la versión 1.0**
 - Se agrega una **fase de EDA previa al desarrollo** que debe confirmar, con un script reproducible, las cifras de este documento (RF-13).
@@ -26,15 +32,15 @@ En palabras del gerente comercial:
 
 ### 2.1 Lo que confirman los datos entregados
 
-*Cifras calculadas durante el diseño. La Fase A (EDA) debe confirmarlas; cualquier discrepancia se corrige aquí con aprobación del responsable.*
+*Cifras confirmadas por el EDA ([EDA.md](./EDA.md), sección 3). Las discrepancias que encontró se corrigieron en la versión 1.2.*
 
 | Hallazgo | Evidencia | Implicación para el producto |
 |---|---|---|
 | La tasa de cierre base es baja | 9,0 % en el histórico (197 de 2.200) | Cada punto de mejora en el orden de atención tiene valor |
-| **La velocidad de contacto es la palanca más fuerte** | Contacto en 1 h: 16,7 % de cierre. A las 120 h: 4,7 % (3,5 veces menos) | La prioridad debe incluir **urgencia**, no solo la calidad del lead |
-| Los atributos del lead separan poco | AUC entre 0,56 y 0,60 con modelos simples | Hay que ser honesto: el puntaje ordena, no predice con certeza |
+| **La velocidad de contacto es la palanca más fuerte** | Contacto en 1 h: 16,7 % de cierre. A las 120 h: 4,7 % (3,6 veces menos) | La prioridad debe incluir **urgencia**, no solo la calidad del lead |
+| Los atributos del lead separan poco | AUC entre 0,55 y 0,60 con modelos simples (regresión logística y puntaje v1) | Hay que ser honesto: el puntaje ordena, no predice con certeza |
 | Aun así, los extremos sí se diferencian | Grupo "caliente": 15,8 % de cierre. Grupo "frío": 7,3 % (2,2 veces), estable en validación temporal | La temperatura es útil para decidir a quién llamar primero |
-| La lentitud es peor que lo que percibe el gerente | 55 % de los leads actuales no fue contactado en 24 h o nunca | La vista diaria debe señalar los leads nuevos sin tocar |
+| La lentitud es peor que lo que percibe el gerente | 55 % de los leads actuales no fue contactado en 24 h o nunca (las fechas con precisión de día se leen como 00:00) | La vista diaria debe señalar los leads nuevos sin tocar |
 | Hay información valiosa en las conversaciones | 677 conversaciones: cuota inicial, forma de pago, citas, objeciones | Extraerla con IA y mostrarla al asesor |
 
 ## 3. Objetivos y métricas
@@ -100,6 +106,7 @@ En palabras del gerente comercial:
 - El detalle del lead muestra los campos extraídos, las razones del puntaje y la conversación completa.
 - Si el lead no tiene conversación, se indica "Sin conversación" y los campos aparecen como "No informa".
 - Si la persona escribió por varios canales, se ven todos sus leads consolidados.
+- Se indica si el modelo de interés está disponible en el punto de venta del lead. Es un dato informativo y no cambia el puntaje.
 
 **HU-03. Urgencia visible.** Como asesor, quiero identificar de inmediato los leads nuevos sin contactar, porque son los que más se pierden.
 - Los leads sin contacto con menos de 24 h tienen una marca visual.

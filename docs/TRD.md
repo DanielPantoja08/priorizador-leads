@@ -1,7 +1,20 @@
 # TRD — Priorizador Diario de Leads
 
-**Versión:** 1.1 · **Documentos complementarios:** [PRD.md](./PRD.md) (qué y por qué) · [EDA.md](./EDA.md) (evidencia de los datos, se genera en la Fase A)
+**Versión:** 1.2 · **Documentos complementarios:** [PRD.md](./PRD.md) (qué y por qué) · [EDA.md](./EDA.md) (evidencia de los datos, se genera en la Fase A)
 **Convención:** los identificadores RF y RNF remiten a los requisitos del PRD.
+
+**Cambios frente a la versión 1.1 (ajustes según el EDA)**
+- **Sección 9.1:** el AUC de la regresión logística pasa a 0,548 y se especifican sus variables y su validación.
+- **Sección 9.2:** la tasa de "no manifestó cuota" pasa a 8,3 %, calculada contra el resto (NO y NO_INFORMA).
+- **Sección 17:**
+  - 49 grupos duplicados, contados después de quitar las filas con `lead_id` repetido.
+  - El 55 % sin contacto en 24 h se calcula con el método medianoche.
+- **Sección 6:**
+  - El diccionario de ciudades incluye `bogota` y `bogota d.c.`.
+  - `capacidad_diaria_leads` se renombra en la ingesta.
+  - Nueva validación cruzada `sin_gestion_con_contacto`.
+- **Secciones 5.2, 6.2, 13 y 14:** disponibilidad del modelo en el punto de venta (`modelo_disponible_pv`), informativa para el asesor.
+- **Secciones 2 y 4:** pandas 3.x, y nota sobre las llaves nuevas de Supabase.
 
 **Cambios frente a la versión 1.0**
 - El entorno de Python se gestiona con **uv**.
@@ -82,7 +95,7 @@ flowchart LR
 |---|---|---|
 | Lenguaje | Python 3.12 | Dominio del equipo, ecosistema de datos |
 | Gestión del entorno | **uv** (`pyproject.toml` + `uv.lock`) | Instalación rápida, dependencias bloqueadas y reproducibles, grupos por uso |
-| Manipulación de datos | pandas | Volumen pequeño (miles de filas) |
+| Manipulación de datos | pandas 3.x | Volumen pequeño (miles de filas). Los insumos se leen con `dtype="str"` y copy-on-write está activo |
 | EDA | pandas, matplotlib, scikit-learn | Análisis reproducible por script, sin notebooks |
 | Validación | Pydantic v2 | Esquema único para la extracción y validación de la salida del LLM |
 | Coincidencia aproximada | rapidfuzz | Normalización de modelos determinística y explicable |
@@ -127,6 +140,7 @@ motos-leads/
 ├── data/raw/                     # insumos sintéticos entregados (solo lectura)
 ├── eda/
 │   ├── __main__.py               # uv run python -m eda
+│   ├── comun.py                  # carga, intervalos y normalizaciones de medición
 │   ├── perfil.py                 # perfil y calidad de datos
 │   ├── historico.py              # tasas, intervalos, AUC, validación temporal
 │   ├── conversaciones.py
@@ -187,6 +201,8 @@ Si Streamlit Community Cloud requiere un archivo de dependencias, se genera en l
 
 `.env` y `.streamlit/secrets.toml` están en `.gitignore`. El repositorio incluye `.env.example` y `.streamlit/secrets.toml.example`, solo con los nombres de las variables. Las llaves locales de Supabase también se tratan como secretos: no se escriben en el código.
 
+**Llaves de Supabase.** Supabase CLI 2.x entrega dos juegos de llaves: las heredadas (`ANON_KEY`, `SERVICE_ROLE_KEY`) y las nuevas (`PUBLISHABLE_KEY`, `SECRET_KEY`). Este proyecto usa las heredadas, con los nombres de esta tabla, y las toma de `supabase status -o json`. Migrar a las nuevas solo cambia los valores y los nombres de las variables, no el código de acceso.
+
 ## 5. Modelo de datos
 
 Zona horaria: todas las marcas de tiempo son `timestamptz`, con los datos de origen interpretados en `America/Bogota`.
@@ -213,7 +229,7 @@ asesor (
   empresa_id       text not null references empresa,
   punto_venta_id   text not null references punto_venta,
   nombre           text not null,
-  capacidad_diaria int  not null check (capacidad_diaria > 0),
+  capacidad_diaria int  not null check (capacidad_diaria > 0),  -- capacidad_diaria_leads en asesores.csv
   activo           boolean not null,
   fecha_ingreso    date
 )
@@ -265,6 +281,7 @@ lead (
   sku_interes               text references modelo,
   marca_interes             text,
   match_modelo_score        numeric,
+  modelo_disponible_pv      boolean,          -- el SKU está en el punto de venta del lead (null sin SKU); informativo
   es_principal              boolean not null default true,
   flags_calidad             text[] not null default '{}',
   actualizado_en            timestamptz default now()
@@ -385,9 +402,10 @@ usuario_empresa (
 | `telefono` | Solo dígitos; si tiene 12 dígitos y empieza por `57`, se quita el prefijo; válido si tiene 10 dígitos y empieza por `3`. Si no, se marca `telefono_invalido` |
 | `email` | `strip().lower()`; validación básica de formato |
 | `nombre` | Sin espacios sobrantes; formato título. Las variantes abreviadas ("F. Londoño") se conservan en el lead; el cliente toma la más larga |
-| `ciudad` | Sin tildes y en minúsculas, luego diccionario de sinónimos (`b/quilla`→Barranquilla, `sta marta`→Santa Marta, `rio negro`→Rionegro, `bogota dc`→Bogotá D.C., `cartagena de indias`→Cartagena). Los nulos se quedan nulos |
+| `ciudad` | Sin tildes y en minúsculas, luego diccionario de sinónimos (`b/quilla`→Barranquilla, `sta marta`→Santa Marta, `rio negro`→Rionegro, `bogota dc`, `bogota d.c.` y `bogota`→Bogotá D.C., `cartagena de indias`→Cartagena). Los nulos se quedan nulos |
 | Registro de prueba | Se excluye si el nombre contiene "prueba" o el teléfono es inválido y el canal es nulo |
-| Filas repetidas | Por `lead_id`, se conserva la primera y se registra `lead_repetido` |
+| Filas repetidas | Por `lead_id`, se conserva la primera y se registra `lead_repetido`. Se quitan **antes** de deduplicar |
+| `asesores.csv` | `capacidad_diaria_leads` se renombra a `capacidad_diaria`; `activo` (`SI`/`NO`) pasa a booleano |
 
 ### 6.1 Fechas
 
@@ -412,6 +430,7 @@ Una fecha imposible (por ejemplo `2026-08-33`) se guarda como `null` con el regi
 **Validaciones cruzadas** (solo generan banderas, no descartan):
 - `contacto_antes_de_registro`: solo si ambas fechas tienen precisión de minuto. Con precisión de día, se compara por fecha.
 - `estado_sin_fecha_contacto`: estado distinto de "Sin gestión" y sin fecha de contacto.
+- `sin_gestion_con_contacto`: estado "Sin gestión" con fecha de primer contacto.
 
 ### 6.2 Modelo de interés (`catalog_match.py`)
 
@@ -420,6 +439,7 @@ Una fecha imposible (por ejemplo `2026-08-33`) se guarda como `null` con el regi
 3. **Coincidencia por línea:** si falla lo anterior, se compara solo contra `linea` con umbral de 90 (por ejemplo "TTR 200" → AKT TTR 200).
 4. **Solo marca:** si el texto contiene únicamente una marca, o varias líneas empatan (por ejemplo "Bajaj Pulsar" corresponde a 3 líneas), se asigna `marca_interes`, el SKU queda nulo y se registra `modelo_ambiguo`.
 5. **Nulo:** sin modelo, se registra `modelo_faltante`.
+6. **Disponibilidad:** con SKU asignado, `modelo_disponible_pv` indica si el punto de venta del lead está en `puntos_venta_disponibles` del catálogo (tabla `modelo_punto_venta`). El dato es informativo: se muestra al asesor y no suma puntos.
 
 Si la conversación trae un modelo con SKU, **prevalece sobre el del formulario** (paso de consolidación, sección 8.4).
 
@@ -518,7 +538,7 @@ Para cada lead principal:
 ### 9.1 Enfoque
 
 Se eligió un **puntaje aditivo por puntos** en lugar de un modelo entrenado, por tres razones:
-- El histórico tiene poco poder predictivo: una regresión logística llega a un AUC de 0,555, y el puntaje simple a 0,584. Un modelo más complejo no aporta y resta explicabilidad.
+- El histórico tiene poco poder predictivo: una regresión logística llega a un AUC de 0,548 y el puntaje simple a 0,584. La regresión usa canal, cuota inicial, forma de pago, cita y precio, con validación cruzada estratificada de 5 pliegues; con corte temporal llega a 0,581. Un modelo más complejo no aporta y resta explicabilidad.
 - Los puntos se traducen directamente en razones legibles para el asesor.
 - Los pesos se derivan de las tasas de cierre del histórico y se validan con un corte temporal.
 
@@ -533,7 +553,7 @@ Se eligió un **puntaje aditivo por puntos** en lugar de un modelo entrenado, po
 | Factor | Tasa si se cumple | Tasa si no | Puntos |
 |---|---|---|---|
 | Pidió cita | 11,8 % | 8,9 % | +3 |
-| Manifestó cuota inicial | 11,8 % | 8,1 % | +3 |
+| Manifestó cuota inicial | 11,8 % | 8,3 % (NO y NO_INFORMA) | +3 |
 | Precio del modelo ≥ $10 M | 11,5 % | 8,5 % | +2 |
 | Pago de contado | 11,8 % | 8,4 % (crédito) | +1 |
 
@@ -577,7 +597,7 @@ orden       = prioridad desc, fecha_registro asc
 
 ### 9.3 Validación (`evaluation/validate_scoring.py`)
 
-Aplica el componente A sobre el histórico con gestión (2.021 registros) y reporta los siguientes resultados. Se calcularon durante el diseño y el EDA (sección 17) debe confirmarlos:
+Aplica el componente A sobre el histórico con gestión (2.021 registros) y reporta los siguientes resultados. El EDA (sección 17) los confirmó:
 
 | Temperatura | Tasa de cierre (todo el histórico) | n | Tasa en validación temporal (≥ 15 de junio) | n |
 |---|---|---|---|---|
@@ -713,7 +733,7 @@ La app se desarrolla y valida en local (`uv run streamlit run app/streamlit_app.
 - **Vista "Mis leads de hoy"** (asesor, o gerente que elige un asesor de su empresa):
   - Selector de fecha de corte.
   - Tabla ordenada con temperatura (con color y texto), nombre, teléfono, modelo, cuota, forma de pago, horas sin contacto y estado.
-  - Detalle desplegable con las razones del puntaje, los campos extraídos con su evidencia, la conversación completa y los otros leads del cliente.
+  - Detalle desplegable con las razones del puntaje, los campos extraídos con su evidencia, la conversación completa, los otros leads del cliente y si el modelo de interés está disponible en el punto de venta.
 - **Tablero del gerente:**
   - Carga asignada frente a capacidad por asesor.
   - Distribución por temperatura.
@@ -729,7 +749,7 @@ Todas se ejecutan con `uv run pytest -q`. **Ninguna prueba llama a servicios ext
 | Archivo | Cubre |
 |---|---|
 | `test_normalize.py` | Los 7 formatos de teléfono, los 4 formatos de fecha (incluidos los casos ambiguos y la fecha inválida), el mapeo de canal, estado y ciudad |
-| `test_catalog_match.py` | "Suzuky GN 125", "A.K.T Dynamic R3 125", "TTR 200", "Bajaj Pulsar" (ambiguo), "Honda" (solo marca), sufijo 2026 |
+| `test_catalog_match.py` | "Suzuky GN 125", "A.K.T Dynamic R3 125", "TTR 200", "Bajaj Pulsar" (ambiguo), "Honda" (solo marca), sufijo 2026, disponibilidad del SKU en el punto de venta |
 | `test_dedup.py` | Agrupación por empresa, teléfono compartido entre empresas (no se fusiona), elección del lead principal |
 | `test_rules_extractor.py` | Montos en jerga, "0 millones", cambio de modelo, conversación sin respuesta |
 | `test_gemini_extractor.py` | Lotes, IDs faltantes, respuesta inválida, reintentos, caché y respaldo con reglas (todo simulado) |
@@ -819,10 +839,10 @@ Archivo en la raíz, de máximo 150 líneas. Contiene:
    - Tasa base del histórico (9,0 %) y tasa con gestión (9,75 %).
    - Cierre por horas al primer contacto (16,7 % a 1 h, 7,4 % a 24 h, 4,7 % a 120 h).
    - Tasas de la tabla 9.2.
-   - AUC de la regresión logística (0,555) y del puntaje v1 (0,584).
+   - AUC de la regresión logística (0,548) y del puntaje v1 (0,584).
    - Resultados de la tabla 9.3, incluida la validación temporal.
-   - 55 % de leads sin contacto en 24 h o nunca, documentando el método.
-   - 91 teléfonos compartidos entre empresas y 51 grupos duplicados dentro de la misma empresa, 28 de ellos multicanal.
+   - 55 % de leads sin contacto en 24 h o nunca, con el método medianoche: las fechas con precisión de día se leen como 00:00 (PRD 2.1).
+   - 91 teléfonos compartidos entre empresas y 49 grupos duplicados dentro de la misma empresa, contados después de quitar las filas con `lead_id` repetido; 28 de ellos son multicanal.
    - 12 conversaciones huérfanas y 25 leads con dos conversaciones.
    - Volumen diario de leads frente a capacidad de los asesores activos, por empresa.
 4. **Histórico:**
