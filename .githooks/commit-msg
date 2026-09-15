@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Hook commit-msg: elimina líneas de coautoría o atribución de herramientas.
+# Portable (bash + grep POSIX), sin opciones exclusivas de macOS o Linux.
+# Se activa con: git config core.hooksPath .githooks
+
+archivo_mensaje="$1"
+temporal="${archivo_mensaje}.tmp"
+
+# -v invierte la coincidencia, -i ignora mayúsculas, -E usa expresiones extendidas.
+# grep devuelve 1 si no queda ninguna línea; eso no debe abortar el commit.
+grep -viE '^Co-Authored-By:|^Claude-Session:|Generated with .*Claude' "$archivo_mensaje" > "$temporal" || true
+
+cat "$temporal" > "$archivo_mensaje"
+rm -f "$temporal"
+exit 0

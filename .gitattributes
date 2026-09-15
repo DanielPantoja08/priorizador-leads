@@ -1,0 +1,11 @@
+# Normaliza finales de línea en el repositorio.
+* text=auto
+
+# Los scripts de shell deben conservar LF para ejecutarse en Git Bash, macOS y Linux.
+.githooks/* text eol=lf
+*.sh text eol=lf
+
+# Insumos entregados: solo lectura, se versionan byte a byte (vienen con CRLF).
+data/raw/** -text
+*.pdf binary
+*.png binary
