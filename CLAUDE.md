@@ -99,4 +99,14 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
   - Llaves heredadas de Supabase (anon y service_role).
   - `docs/PROMPT.md` fuera del repositorio.
   - ruff no formatea los documentos.
-- Fase B: no iniciada.
+- **Fase B terminada, en punto de control B**:
+  - Migraciones: esquema, RLS con privilegios explícitos y vistas `security_invoker`.
+  - `seed.sql` con las empresas.
+  - Pipeline `run`: ingest → normalize → catalog_match → dedup → load. Es idempotente.
+  - `scripts/crear_usuarios_demo.py`: correos `@example.com`; la contraseña sale de `DEMO_PASSWORD`.
+- Decisiones de la Fase B:
+  - `cliente.clave_dedup`.
+  - `problema_calidad` guarda solo la última corrida.
+  - `lead.flags_calidad` guarda solo las banderas (tipos en `quality.BANDERAS`).
+  - `prioritario` en `asignacion` (TRD 10).
+  - Esta versión de Supabase no concede privilegios por defecto: se conceden en la migración de RLS.
