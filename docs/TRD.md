@@ -1,7 +1,14 @@
 # TRD — Priorizador Diario de Leads
 
-**Versión:** 1.2 · **Documentos complementarios:** [PRD.md](./PRD.md) (qué y por qué) · [EDA.md](./EDA.md) (evidencia de los datos, se genera en la Fase A)
+**Versión:** 1.3 · **Documentos complementarios:** [PRD.md](./PRD.md) (qué y por qué) · [EDA.md](./EDA.md) (evidencia de los datos, se genera en la Fase A)
 **Convención:** los identificadores RF y RNF remiten a los requisitos del PRD.
+
+**Cambios frente a la versión 1.2 (decisiones del punto de control A)**
+- **Sección 10:** los leads sin cupo se siguen asignando solo por capacidad, pero se marcan como `prioritario` si son Caliente o si llevan menos de 24 h sin contacto. El tablero del gerente los muestra primero.
+- **Sección 6.1:** nueva bandera `conversacion_antes_de_registro`.
+- **Sección 5.2:** `cliente` usa `clave_dedup` (teléfono o email) como clave natural y admite `telefono` nulo, para aplicar la clave secundaria de la sección 7.
+- **Sección 5.4:** `problema_calidad.empresa_id`, para que cada gerente vea solo los problemas de su empresa.
+- **Sección 11.2:** `crear_usuarios_demo.py` se ejecuta después del pipeline, porque el usuario asesor referencia la tabla `asesor`.
 
 **Cambios frente a la versión 1.1 (ajustes según el EDA)**
 - **Sección 9.1:** el AUC de la regresión logística pasa a 0,548 y se especifican sus variables y su validación.
@@ -258,11 +265,12 @@ modelo_punto_venta (
 cliente (
   cliente_id     uuid primary key default gen_random_uuid(),
   empresa_id     text not null references empresa,
-  telefono       text not null,             -- 10 dígitos
+  clave_dedup    text not null,             -- 'tel:3001234567' o 'email:x@y.co' (sección 7)
+  telefono       text,                      -- 10 dígitos; null si es inválido
   email          text,
   nombre         text not null,             -- el nombre más completo del grupo
   ciudad         text,
-  unique (empresa_id, telefono)             -- regla de deduplicación, por empresa
+  unique (empresa_id, clave_dedup)          -- regla de deduplicación, por empresa
 )
 
 lead (
@@ -354,6 +362,7 @@ asignacion (
   asesor_id    text references asesor,       -- null si quedó sin cupo
   orden        int,
   estado       text check (estado in ('asignado','sin_cupo')),
+  prioritario  boolean not null default false,  -- Caliente o sin contacto con < 24 h (sección 10)
   primary key (fecha_corte, lead_id)
 )
 
@@ -377,6 +386,7 @@ ejecucion (
 problema_calidad (
   id              bigserial primary key,
   ejecucion_id    bigint references ejecucion,
+  empresa_id      text references empresa,   -- null si no se puede atribuir (p. ej. huérfanas)
   archivo         text, registro_id text, campo text,
   tipo            text,                      -- formato_fecha_ambiguo, telefono_invalido, ...
   valor_original  text, accion text
@@ -431,6 +441,7 @@ Una fecha imposible (por ejemplo `2026-08-33`) se guarda como `null` con el regi
 - `contacto_antes_de_registro`: solo si ambas fechas tienen precisión de minuto. Con precisión de día, se compara por fecha.
 - `estado_sin_fecha_contacto`: estado distinto de "Sin gestión" y sin fecha de contacto.
 - `sin_gestion_con_contacto`: estado "Sin gestión" con fecha de primer contacto.
+- `conversacion_antes_de_registro`: la conversación empieza en un día anterior al registro de su lead. Se compara por fecha, porque el registro puede tener precisión de día.
 
 ### 6.2 Modelo de interés (`catalog_match.py`)
 
@@ -616,6 +627,8 @@ El algoritmo `assign.py` recorre cada `punto_venta_id`:
 2. Toma los asesores con `activo = true` del punto de venta. Los asesores AS-037 y AS-040 quedan excluidos.
 3. Reparte en **serpentina**: A, B, C, C, B, A… Así los primeros leads (los mejores) se distribuyen de forma equilibrada. Un asesor sale del reparto al alcanzar su `capacidad_diaria`.
 4. Los leads restantes quedan con `estado = 'sin_cupo'` y `asesor_id = null`, y aparecen en el tablero del gerente.
+   - **Prioritarios:** `prioritario = true` si la temperatura es Caliente o si el lead no tiene contacto y lleva menos de 24 h desde el registro (la marca de urgencia de HU-03). El campo se calcula para todos los leads, asignados o no.
+   - La marca **no** cambia la asignación: se reparte por prioridad y capacidad. En el tablero, los prioritarios sin cupo aparecen primero y resaltados, para que el gerente decida.
 5. `orden` es la posición del lead dentro de la lista del asesor.
 
 La asignación se recalcula completa para cada `fecha_corte`: se borra y se reinserta en una sola transacción. La asignación es estrictamente dentro del punto de venta y de la empresa; no se reparte entre empresas.
@@ -642,9 +655,9 @@ Reconstrucción completa desde cero:
 uv sync --all-groups                 # entorno bloqueado por uv.lock
 supabase start                       # levanta Postgres, Auth y Studio en Docker
 supabase db reset                    # aplica migraciones y seed.sql
-uv run python scripts/crear_usuarios_demo.py
-uv run python -m eda                 # regenera docs/EDA.md
+uv run python -m eda                 # regenera docs/EDA.md (no usa la base)
 uv run python -m pipeline run --fecha-corte 2026-09-10
+uv run python scripts/crear_usuarios_demo.py   # después del pipeline: el usuario asesor referencia la tabla asesor
 uv run python -m pipeline eval
 uv run streamlit run app/streamlit_app.py
 ```
@@ -737,7 +750,7 @@ La app se desarrolla y valida en local (`uv run streamlit run app/streamlit_app.
 - **Tablero del gerente:**
   - Carga asignada frente a capacidad por asesor.
   - Distribución por temperatura.
-  - Leads sin cupo.
+  - Leads sin cupo, con los prioritarios primero y resaltados.
   - Resumen de problemas de calidad.
 - **Pestaña "Cómo prioriza":** la tabla de pesos, la validación histórica (sección 9.3), los hallazgos principales del EDA y los resultados de la evaluación del extractor.
 - **Pie de página:** fecha y estado de la última ejecución, leídos de `ejecucion` a través de una vista limitada a esos campos.

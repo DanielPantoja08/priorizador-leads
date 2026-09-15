@@ -18,9 +18,9 @@ WhatsApp (extracción con IA) e incluye las razones de su posición. Cada empres
 uv sync --all-groups                 # entorno bloqueado por uv.lock
 supabase start                       # Postgres, Auth y Studio en Docker
 supabase db reset                    # aplica migraciones y seed.sql
-uv run python scripts/crear_usuarios_demo.py
 uv run python -m eda                 # regenera docs/EDA.md y docs/img/eda/
 uv run python -m pipeline run --fecha-corte 2026-09-10
+uv run python scripts/crear_usuarios_demo.py   # después del pipeline (el asesor demo debe existir)
 uv run python -m pipeline eval
 uv run streamlit run app/streamlit_app.py
 ```

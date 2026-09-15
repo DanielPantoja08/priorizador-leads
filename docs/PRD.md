@@ -1,8 +1,11 @@
 # PRD — Priorizador Diario de Leads
 
 **Proyecto:** Assessment técnico, Analista de IA — Gerencia de IA y Transformación
-**Versión:** 1.2 · **Estado:** Aprobado para desarrollo · **Fecha:** septiembre de 2026
+**Versión:** 1.3 · **Estado:** Aprobado para desarrollo · **Fecha:** septiembre de 2026
 **Documentos complementarios:** [TRD.md](./TRD.md) (cómo se construye) · [EDA.md](./EDA.md) (evidencia de los datos, se genera en la Fase A)
+
+**Cambios frente a la versión 1.2**
+- La lista diaria incluye todos los leads abiertos. Los que quedan sin cupo se marcan como **prioritarios** si son Caliente o si llevan menos de 24 h sin contacto (HU-04).
 
 **Cambios frente a la versión 1.1 (ajustes según el EDA)**
 - La velocidad de contacto separa 3,6 veces, no 3,5: la cifra anterior estaba truncada.
@@ -114,6 +117,7 @@ En palabras del gerente comercial:
 
 **HU-04. Tablero de gerente.** Como gerente, quiero ver cómo quedó distribuida la carga de mi empresa.
 - Muestra los leads asignados por asesor frente a su capacidad, la distribución por temperatura y los leads sin cupo.
+- Los leads sin cupo **prioritarios** (Caliente, o sin contacto con menos de 24 h) aparecen primero y resaltados. La marca no cambia la asignación automática; el gerente decide si los reasigna.
 - Muestra únicamente datos de la empresa del usuario.
 
 **HU-05. Aislamiento.** Como comercializadora, quiero que otra empresa del grupo nunca vea mis clientes.
