@@ -1,0 +1,42 @@
+[project]
+name = "priorizador-leads"
+version = "0.1.0"
+description = "Priorizador diario de leads por asesor, enriquecido con IA"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "google-genai>=2.23",
+    "pandas>=3.0",
+    "psycopg[binary]>=3.3",
+    "pydantic>=2.13",
+    "python-dotenv>=1.2",
+    "rapidfuzz>=3.14",
+    "tenacity>=9.1",
+]
+
+[dependency-groups]
+app = [
+    "streamlit>=1.64",
+    "supabase>=2.31",
+]
+dev = [
+    "pytest>=9.1",
+    "ruff>=0.16",
+]
+eda = [
+    "matplotlib>=3.11",
+    "scikit-learn>=1.9",
+]
+
+[tool.uv]
+# `uv run` y `uv sync` instalan todos los grupos (EDA, pruebas y app) por defecto.
+default-groups = "all"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
