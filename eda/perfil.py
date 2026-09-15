@@ -298,7 +298,7 @@ def tabla_calidad(
         "`Bogotá` y `Bogotá D.C.` conviven y el TRD solo mapea `bogota dc`",
         len(bogota),
         ", ".join(f"`{v}`" for v in sorted(bogota["ciudad"].unique())),
-        "Propuesta: mapear también `bogota` y `bogota d.c.` a Bogotá D.C.",
+        "`bogota`, `bogota d.c.` y `bogota dc` → Bogotá D.C. (TRD 1.2, sección 6)",
         nueva=True,
     )
     agregar("Ciudad nula", int(df["ciudad"].isna().sum()), "—", "Se conserva nula")
@@ -410,7 +410,7 @@ def tabla_calidad(
         "Estado `Sin gestión` con fecha de primer contacto",
         len(con_fecha),
         ", ".join(f"`{v}`" for v in con_fecha["lead_id"].head(3)) or "—",
-        "Propuesta: bandera `sin_gestion_con_contacto`",
+        "Bandera `sin_gestion_con_contacto` (TRD 1.2, sección 6.1)",
         nueva=len(con_fecha) > 0,
     )
 
@@ -449,7 +449,7 @@ def tabla_calidad(
         f"`{no_disponible['lead_id'].iloc[0]}` pide `{no_disponible['sku'].iloc[0]}` en `{no_disponible['punto_venta_id'].iloc[0]}`"
         if len(no_disponible)
         else "—",
-        "Solo informativo: el TRD no usa la disponibilidad. Propuesta: mostrarla al asesor",
+        "`modelo_disponible_pv`, informativo para el asesor; no suma puntos (TRD 1.2, sección 6.2)",
         nueva=len(no_disponible) > 0,
     )
 
@@ -458,7 +458,7 @@ def tabla_calidad(
         "Nombre de columna de capacidad distinto al TRD",
         "1 columna" if capacidad else 0,
         "`capacidad_diaria_leads` en el CSV, `capacidad_diaria` en el modelo de datos",
-        "Renombrar en la ingesta (documentar en TRD 5.1)",
+        "Se renombra en la ingesta (TRD 1.2, secciones 5.1 y 6)",
         nueva=capacidad,
     )
     return tabla_md(["Problema", "Casos", "Ejemplo", "Resolución"], filas), cifras

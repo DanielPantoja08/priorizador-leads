@@ -122,11 +122,11 @@ def verificacion(p: dict, h: dict, c: dict) -> tuple[str, Counter, list[list]]:
         )
     veces = h["horas_1"] / h["horas_120"]
     fila(
-        "Contacto en 1 h frente a 120 h: 3,5 veces",
+        "Contacto en 1 h frente a 120 h: 3,6 veces",
         "PRD 2.1",
         f"{num(veces, 2)} veces",
-        si_no(round(veces, 1) == 3.5),
-        "Diferencia de redondeo: truncar 3,56 da 3,5; redondear da 3,6",
+        si_no(round(veces, 1) == 3.6),
+        "Corregido en PRD 1.2 (antes 3,5 por truncamiento)",
     )
 
     # Tabla 9.2
@@ -137,10 +137,10 @@ def verificacion(p: dict, h: dict, c: dict) -> tuple[str, Counter, list[list]]:
         si_no(_coincide_pct(h["cita_si"], 11.8) and _coincide_pct(h["cita_no"], 8.9)),
     )
     fila(
-        "Manifestó cuota: 11,8 % frente a 8,1 %", "TRD §9.2 A",
-        f"{pct(h['cuota_si'])} frente a {pct(h['cuota_no'])} (NO + NO_INFORMA) o {pct(h['cuota_no_solo'])} (solo NO)",
-        si_no(_coincide_pct(h["cuota_si"], 11.8) and (_coincide_pct(h["cuota_no"], 8.1) or _coincide_pct(h["cuota_no_solo"], 8.1))),
-        "Ninguna definición del grupo de comparación reproduce 8,1 %",
+        "Manifestó cuota: 11,8 % frente a 8,3 % (NO y NO_INFORMA)", "TRD §9.2 A",
+        f"{pct(h['cuota_si'])} frente a {pct(h['cuota_no'])} (NO + NO_INFORMA) · {pct(h['cuota_no_solo'])} solo contra NO",
+        si_no(_coincide_pct(h["cuota_si"], 11.8) and _coincide_pct(h["cuota_no"], 8.3)),
+        "Corregido en TRD 1.2 (antes 8,1 %, no reproducible)",
     )  # fmt: skip
     fila(
         "Precio ≥ $10 M: 11,5 % frente a 8,5 %",
@@ -163,10 +163,10 @@ def verificacion(p: dict, h: dict, c: dict) -> tuple[str, Counter, list[list]]:
 
     # AUC
     fila(
-        "AUC de la regresión logística: 0,555", "TRD §9.1",
+        "AUC de la regresión logística: 0,548 (validación cruzada) y 0,581 (temporal)", "TRD §9.1",
         f"{num(h['auc_rl_cv'])} (validación cruzada) · {num(h['auc_rl_prueba'])} (temporal) · {num(h['auc_rl_muestra'])} (en muestra)",
-        si_no(any(_coincide_num(h[k], 0.555) for k in ("auc_rl_cv", "auc_rl_prueba", "auc_rl_muestra"))),
-        "El TRD no especifica variables ni forma de validación; el valor depende de ambas",
+        si_no(_coincide_num(h["auc_rl_cv"], 0.548) and _coincide_num(h["auc_rl_prueba"], 0.581)),
+        "Corregido en TRD 1.2 (antes 0,555, sin método especificado)",
     )  # fmt: skip
     fila(
         "AUC del puntaje v1: 0,584",
@@ -183,11 +183,11 @@ def verificacion(p: dict, h: dict, c: dict) -> tuple[str, Counter, list[list]]:
     minimo = min(h["auc_rl_cv"], h["auc_rl_prueba"], h["auc_v1"], h["auc_v1_test"])
     maximo = max(h["auc_rl_cv"], h["auc_rl_prueba"], h["auc_v1"], h["auc_v1_test"])
     fila(
-        "AUC entre 0,56 y 0,60 con modelos simples",
+        "AUC entre 0,55 y 0,60 con modelos simples",
         "PRD 2.1",
         f"{num(minimo)} a {num(maximo)}",
-        si_no(round(minimo, 2) >= 0.56 and round(maximo, 2) <= 0.60),
-        "Depende del AUC de la regresión logística (fila anterior)",
+        si_no(round(minimo, 2) >= 0.55 and round(maximo, 2) <= 0.60),
+        "Corregido en PRD 1.2 (antes 0,56 a 0,60)",
     )
 
     # Tabla 9.3
@@ -220,7 +220,7 @@ def verificacion(p: dict, h: dict, c: dict) -> tuple[str, Counter, list[list]]:
         "55 % de los leads sin contacto en 24 h o nunca", "PRD 2.1",
         f"{pct(p['sin_contacto_24h_medianoche'])} (medianoche) · {pct(p['sin_contacto_24h'])} (conservador) · {pct(p['sin_contacto_24h_pesimista'])} (pesimista)",
         si_no(_coincide_pct(p["sin_contacto_24h_medianoche"], 55.0, 0)),
-        "Coincide solo leyendo las fechas con precisión de día como 00:00. Ver §7",
+        "Método adoptado en PRD 1.2: fechas con precisión de día leídas como 00:00. Ver §7",
     )  # fmt: skip
     fila(
         '"Cuatro de cada diez leads no se tocan en las primeras 24 horas"',
@@ -238,8 +238,8 @@ def verificacion(p: dict, h: dict, c: dict) -> tuple[str, Counter, list[list]]:
         si_no(p["telefonos_compartidos"] == 91),
     )
     fila(
-        "51 grupos duplicados dentro de la misma empresa", "TRD §17", f"{p['grupos_duplicados']} ({p['grupos_con_repetidas']} sin quitar antes los `lead_id` repetidos)",
-        si_no(p["grupos_duplicados"] == 51), "La cifra de 51 cuenta las 2 filas con `lead_id` repetido como grupos duplicados",
+        "49 grupos duplicados dentro de la misma empresa", "TRD §17", f"{p['grupos_duplicados']} ({p['grupos_con_repetidas']} sin quitar antes los `lead_id` repetidos)",
+        si_no(p["grupos_duplicados"] == 49), "Corregido en TRD 1.2 (antes 51, que contaba las 2 filas repetidas)",
     )  # fmt: skip
     fila(
         "28 grupos multicanal",
@@ -302,17 +302,21 @@ def conclusiones(p: dict, h: dict, c: dict, discrepancias: list[list]) -> str:
         f"{c['cambios_modelo']} conversaciones mencionan más de un modelo: la regla de usar el último modelo es necesaria.",
     ]
     contradice = [f"{f[0]} ({f[1]}): calculado {f[2]}. {f[4]}" for f in discrepancias]
-    recomienda = [
-        "Corregir en el PRD y el TRD las cifras marcadas con ❌ según la tabla de verificación (requiere aprobación).",
-        "Documentar el método del porcentaje de leads sin contacto en 24 h, porque el resultado depende de cómo se tratan las fechas con precisión de día.",
-        "Especificar en el TRD las variables y la validación de la regresión logística, o citar el AUC calculado aquí.",
-        "Contar los grupos duplicados después de eliminar las filas con `lead_id` repetido, como indica la sección 6 del TRD.",
-        "Agregar al diccionario de ciudades `bogota` y `bogota d.c.` → Bogotá D.C.",
-        "Renombrar `capacidad_diaria_leads` a `capacidad_diaria` en la ingesta y anotarlo en el TRD.",
+    # Ajustes recomendados por el EDA y aprobados por el responsable; ya están en PRD 1.2 y TRD 1.2.
+    aplicados = [
+        "Cifras corregidas: 3,6 veces (PRD 2.1), AUC entre 0,55 y 0,60 (PRD 2.1), 8,3 % sin cuota contra el resto (TRD 9.2), AUC de la regresión logística 0,548 con variables y validación declaradas (TRD 9.1) y 49 grupos duplicados (TRD 17).",
+        "Método del porcentaje de leads sin contacto en 24 h: las fechas con precisión de día se leen como 00:00 (PRD 2.1 y TRD 17).",
+        "Los grupos duplicados se cuentan después de eliminar las filas con `lead_id` repetido (TRD 6).",
+        "Diccionario de ciudades con `bogota` y `bogota d.c.` → Bogotá D.C. (TRD 6).",
+        "`capacidad_diaria_leads` se renombra a `capacidad_diaria` en la ingesta (TRD 5.1 y 6).",
+        "Nueva validación cruzada `sin_gestion_con_contacto` (TRD 6.1).",
+        "Disponibilidad del modelo en el punto de venta (`modelo_disponible_pv`), informativa para el asesor (PRD HU-02; TRD 5.2, 6.2 y 13).",
     ]
     partes = ["### Qué confirma", *[f"- {x}" for x in confirma], "", "### Qué contradice"]
-    partes += [f"- {x}" for x in contradice] or ["- Nada."]
-    partes += ["", "### Qué ajustes recomienda", *[f"- {x}" for x in recomienda]]
+    partes += [f"- {x}" for x in contradice] or [
+        "- Nada frente a PRD 1.2 y TRD 1.2. Las discrepancias de la versión 1.1 se corrigieron con aprobación del responsable."
+    ]
+    partes += ["", "### Ajustes aplicados según el EDA", *[f"- {x}" for x in aplicados]]
     return "\n".join(partes)
 
 
@@ -339,7 +343,7 @@ def escribir(perfil: dict, historico: dict, conversaciones: dict) -> tuple[Count
 
 - Verificación de cifras: **{conteo[SI]} coinciden**, **{conteo[NO]} no coinciden** y {conteo[INFO]} son informativas (sección 3).
 - Leads únicos analizados: {miles(p["leads_unicos"])} (sin filas con `lead_id` repetido ni registros de prueba). Histórico: {miles(h["n_historico"])} registros entre {h["rango"][0]} y {h["rango"][1]}.
-- Las discrepancias no se ajustaron: se reportan con su causa probable y una corrección propuesta (sección 8).
+- Las cifras se verifican contra PRD 1.2 y TRD 1.2. Las discrepancias con la versión 1.1 no se ocultaron ajustando el análisis: se corrigieron los documentos con aprobación del responsable (sección 8).
 
 ## 1. Perfil de los archivos
 
@@ -347,7 +351,7 @@ def escribir(perfil: dict, historico: dict, conversaciones: dict) -> tuple[Count
 
 ## 2. Calidad de datos
 
-Las inconsistencias marcadas como **(nueva)** no están descritas en las secciones 6 y 7 del TRD.
+Las inconsistencias marcadas como **(nueva)** no estaban descritas en las secciones 6 y 7 de TRD 1.1; su resolución se incorporó en TRD 1.2.
 
 {perfil["calidad"]}
 
