@@ -22,3 +22,6 @@ docs/PROMPT.md
 Thumbs.db
 .vscode/
 .idea/
+
+# Temporales del sandbox de herramientas
+.bun-*.node
