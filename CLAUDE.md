@@ -83,4 +83,13 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
 - `data/raw/` no se modifica nunca.
 
 ## Estado actual
-- **Fase A en curso**: repositorio inicializado (uv, Supabase CLI, hook de atribución). Pendiente: EDA.
+- **Fase A terminada, en punto de control A**:
+  - Repositorio inicializado con uv, Supabase CLI y el hook de atribución.
+  - EDA generado en `docs/EDA.md`; es determinista.
+  - Pendiente: aprobación de las correcciones al PRD y al TRD (commit `docs: ajustar PRD y TRD según EDA`).
+- Decisiones tomadas en la Fase A:
+  - pandas 3.x.
+  - Llaves heredadas de Supabase (anon y service_role).
+  - `docs/PROMPT.md` fuera del repositorio.
+  - ruff no formatea los documentos.
+- Fase B: no iniciada.
