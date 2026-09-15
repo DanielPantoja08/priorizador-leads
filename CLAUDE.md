@@ -110,3 +110,5 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
   - `lead.flags_calidad` guarda solo las banderas (tipos en `quality.BANDERAS`).
   - `prioritario` en `asignacion` (TRD 10).
   - Esta versión de Supabase no concede privilegios por defecto: se conceden en la migración de RLS.
+  - Herramientas: Supabase CLI 2.117 (scoop), uv 0.9.24, Docker 28.4, Python 3.12.
+  - El EDA reutiliza `pipeline/normalize.py`: una sola implementación de las reglas 6 y 6.1.
