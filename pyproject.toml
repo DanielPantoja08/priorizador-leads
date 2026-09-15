@@ -42,6 +42,10 @@ select = ["E", "F", "I", "B", "UP"]
 # El largo de línea lo gestiona `ruff format`; las cadenas largas de tablas Markdown se permiten.
 ignore = ["E501"]
 
+[tool.ruff.lint.isort]
+# La carpeta supabase/ del proyecto no es el paquete `supabase`.
+known-third-party = ["supabase"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
