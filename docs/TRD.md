@@ -168,7 +168,8 @@ motos-leads/
 │   │   ├── gemini.py
 │   │   └── prompts/extraccion_v1.md
 │   ├── scoring.py
-│   └── assign.py
+│   ├── assign.py
+│   └── load.py                   # carga idempotente en la base (etapa load del diagrama 1.2)
 ├── scripts/
 │   └── crear_usuarios_demo.py    # único lugar donde se usa service_role
 ├── evaluation/
