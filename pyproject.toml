@@ -39,6 +39,9 @@ extend-exclude = ["docs", "*.md"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
+# El largo de línea lo gestiona `ruff format`; las cadenas largas de tablas Markdown se permiten.
+ignore = ["E501"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
