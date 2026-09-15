@@ -5,9 +5,9 @@
 
 ## Resumen
 
-- Verificación de cifras: **34 coinciden**, **5 no coinciden** y 4 son informativas (sección 3).
+- Verificación de cifras: **39 coinciden**, **0 no coinciden** y 4 son informativas (sección 3).
 - Leads únicos analizados: 1.500 (sin filas con `lead_id` repetido ni registros de prueba). Histórico: 2.200 registros entre 2026-03-01 y 2026-07-28.
-- Las discrepancias no se ajustaron: se reportan con su causa probable y una corrección propuesta (sección 8).
+- Las cifras se verifican contra PRD 1.2 y TRD 1.2. Las discrepancias con la versión 1.1 no se ocultaron ajustando el análisis: se corrigieron los documentos con aprobación del responsable (sección 8).
 
 ## 1. Perfil de los archivos
 
@@ -86,7 +86,7 @@
 
 ## 2. Calidad de datos
 
-Las inconsistencias marcadas como **(nueva)** no están descritas en las secciones 6 y 7 del TRD.
+Las inconsistencias marcadas como **(nueva)** no estaban descritas en las secciones 6 y 7 de TRD 1.1; su resolución se incorporó en TRD 1.2.
 
 | Problema | Casos | Ejemplo | Resolución |
 |---|---|---|---|
@@ -102,7 +102,7 @@ Las inconsistencias marcadas como **(nueva)** no están descritas en las seccion
 | Nombre abreviado | 20 | `Y. Castaño Valencia` | Se conserva en el lead; el cliente toma el nombre más largo |
 | Ciudad con sinónimo o abreviatura | 188 | `B/quilla`, `Bogota DC`, `Cartagena de Indias`, `Rio Negro`, `Sta Marta` | Diccionario de sinónimos del TRD |
 | Ciudad que solo difiere en tildes, mayúsculas o espacios | 816 | `BARRANQUILLA`, `BELLO`, `BOGOTA`, `Bogota`, `Bogotá`, `CARTAGENA`… | Sin tildes y en minúsculas, luego nombre oficial |
-| **`Bogotá` y `Bogotá D.C.` conviven y el TRD solo mapea `bogota dc`** (nueva) | 324 | `BOGOTA`, `Bogota`, `Bogotá`, `Bogotá D.C.`, `bogotá` | Propuesta: mapear también `bogota` y `bogota d.c.` a Bogotá D.C. |
+| **`Bogotá` y `Bogotá D.C.` conviven y el TRD solo mapea `bogota dc`** (nueva) | 324 | `BOGOTA`, `Bogota`, `Bogotá`, `Bogotá D.C.`, `bogotá` | `bogota`, `bogota d.c.` y `bogota dc` → Bogotá D.C. (TRD 1.2, sección 6) |
 | Ciudad nula | 79 | — | Se conserva nula |
 | Registro de prueba | 1 | `LD-01501` `prueba prueba` tel `300123` | Se excluye |
 | `lead_id` repetido | 2 | `LD-00011`, `LD-00251` (filas idénticas) | Se conserva la primera y se registra `lead_repetido` |
@@ -112,10 +112,10 @@ Las inconsistencias marcadas como **(nueva)** no están descritas en las seccion
 | Fecha imposible | 1 | `LD-01501`: `2026-08-33 10:00:00` | Se guarda nula con `fecha_invalida` |
 | Contacto antes del registro | 2 | `LD-00295`, `LD-01338` | Bandera `contacto_antes_de_registro` |
 | Estado gestionado sin fecha de contacto | 86 | `Contactado`, `Cotización enviada`, `Descartado`, `En proceso`, `No contesta` | Bandera `estado_sin_fecha_contacto` |
-| Estado `Sin gestión` con fecha de primer contacto | 0 | — | Propuesta: bandera `sin_gestion_con_contacto` |
+| Estado `Sin gestión` con fecha de primer contacto | 0 | — | Bandera `sin_gestion_con_contacto` (TRD 1.2, sección 6.1) |
 | Modelo de interés en texto libre | 190 variantes | coincidencia_completa: 1314 leads / 183 variantes; modelo_ambiguo: 109 leads / 7 variantes; modelo_faltante: 80 leads / 0 variantes | Regla 6.2 (rapidfuzz 85 / 90) |
-| **Modelo pedido no disponible en el punto de venta del lead** (nueva) | 646 | `LD-00002` pide `SKU-018` en `PV-010` | Solo informativo: el TRD no usa la disponibilidad. Propuesta: mostrarla al asesor |
-| **Nombre de columna de capacidad distinto al TRD** (nueva) | 1 columna | `capacidad_diaria_leads` en el CSV, `capacidad_diaria` en el modelo de datos | Renombrar en la ingesta (documentar en TRD 5.1) |
+| **Modelo pedido no disponible en el punto de venta del lead** (nueva) | 646 | `LD-00002` pide `SKU-018` en `PV-010` | `modelo_disponible_pv`, informativo para el asesor; no suma puntos (TRD 1.2, sección 6.2) |
+| **Nombre de columna de capacidad distinto al TRD** (nueva) | 1 columna | `capacidad_diaria_leads` en el CSV, `capacidad_diaria` en el modelo de datos | Se renombra en la ingesta (TRD 1.2, secciones 5.1 y 6) |
 
 ### 2.1 Fechas
 
@@ -212,24 +212,24 @@ Una cifra coincide si el valor calculado, redondeado con los mismos decimales de
 | Cierre con contacto a 1 h: 16,7 % | PRD 2.1; TRD §9.2 C | 16,7 % | ✅ sí |  |
 | Cierre con contacto a 24 h: 7,4 % | PRD 2.1; TRD §9.2 C | 7,4 % | ✅ sí |  |
 | Cierre con contacto a 120 h: 4,7 % | PRD 2.1; TRD §9.2 C | 4,7 % | ✅ sí |  |
-| Contacto en 1 h frente a 120 h: 3,5 veces | PRD 2.1 | 3,56 veces | ❌ no | Diferencia de redondeo: truncar 3,56 da 3,5; redondear da 3,6 |
+| Contacto en 1 h frente a 120 h: 3,6 veces | PRD 2.1 | 3,56 veces | ✅ sí | Corregido en PRD 1.2 (antes 3,5 por truncamiento) |
 | Pidió cita: 11,8 % frente a 8,9 % | TRD §9.2 A | 11,8 % frente a 8,9 % | ✅ sí |  |
-| Manifestó cuota: 11,8 % frente a 8,1 % | TRD §9.2 A | 11,8 % frente a 8,3 % (NO + NO_INFORMA) o 8,7 % (solo NO) | ❌ no | Ninguna definición del grupo de comparación reproduce 8,1 % |
+| Manifestó cuota: 11,8 % frente a 8,3 % (NO y NO_INFORMA) | TRD §9.2 A | 11,8 % frente a 8,3 % (NO + NO_INFORMA) · 8,7 % solo contra NO | ✅ sí | Corregido en TRD 1.2 (antes 8,1 %, no reproducible) |
 | Precio ≥ $10 M: 11,5 % frente a 8,5 % | TRD §9.2 A | 11,5 % frente a 8,5 % | ✅ sí |  |
 | Contado 11,8 % frente a crédito 8,4 % | TRD §9.2 A | 11,8 % frente a 8,4 % | ✅ sí |  |
 | Forma de pago "no informa": 12,3 % | TRD §9.2 A | 12,3 % | ✅ sí |  |
-| AUC de la regresión logística: 0,555 | TRD §9.1 | 0,548 (validación cruzada) · 0,581 (temporal) · 0,590 (en muestra) | ❌ no | El TRD no especifica variables ni forma de validación; el valor depende de ambas |
+| AUC de la regresión logística: 0,548 (validación cruzada) y 0,581 (temporal) | TRD §9.1 | 0,548 (validación cruzada) · 0,581 (temporal) · 0,590 (en muestra) | ✅ sí | Corregido en TRD 1.2 (antes 0,555, sin método especificado) |
 | AUC del puntaje v1: 0,584 | TRD §9.1 | 0,584 | ✅ sí |  |
 | AUC v1 en entrenamiento 0,577 y en prueba 0,602 | TRD §9.3 | 0,577 y 0,602 | ✅ sí |  |
-| AUC entre 0,56 y 0,60 con modelos simples | PRD 2.1 | 0,548 a 0,602 | ❌ no | Depende del AUC de la regresión logística (fila anterior) |
+| AUC entre 0,55 y 0,60 con modelos simples | PRD 2.1 | 0,548 a 0,602 | ✅ sí | Corregido en PRD 1.2 (antes 0,56 a 0,60) |
 | Frío: 7,3 % (n=766) y 7,2 % en prueba (n=221) | TRD §9.3; PRD 2.1 | 7,3 % (n=766) y 7,2 % (n=221) | ✅ sí |  |
 | Tibio: 9,9 % (n=964) y 11,1 % en prueba (n=271) | TRD §9.3; PRD 2.1 | 9,9 % (n=964) y 11,1 % (n=271) | ✅ sí |  |
 | Caliente: 15,8 % (n=291) y 15,7 % en prueba (n=83) | TRD §9.3; PRD 2.1 | 15,8 % (n=291) y 15,7 % (n=83) | ✅ sí |  |
 | Caliente / Frío en prueba: 2,2 veces (criterio ≥ 1,8) | TRD §9.3; PRD §3 | 2,16 veces | ✅ sí |  |
-| 55 % de los leads sin contacto en 24 h o nunca | PRD 2.1 | 54,8 % (medianoche) · 52,7 % (conservador) · 60,0 % (pesimista) | ✅ sí | Coincide solo leyendo las fechas con precisión de día como 00:00. Ver §7 |
+| 55 % de los leads sin contacto en 24 h o nunca | PRD 2.1 | 54,8 % (medianoche) · 52,7 % (conservador) · 60,0 % (pesimista) | ✅ sí | Método adoptado en PRD 1.2: fechas con precisión de día leídas como 00:00. Ver §7 |
 | "Cuatro de cada diez leads no se tocan en las primeras 24 horas" | Enunciado §1; PRD §2 | 52,7 % | ℹ️ informativa | Los datos muestran una lentitud mayor que la percibida, como dice el PRD |
 | 91 teléfonos compartidos entre empresas | TRD §7; TRD §17 | 91 | ✅ sí |  |
-| 51 grupos duplicados dentro de la misma empresa | TRD §17 | 49 (51 sin quitar antes los `lead_id` repetidos) | ❌ no | La cifra de 51 cuenta las 2 filas con `lead_id` repetido como grupos duplicados |
+| 49 grupos duplicados dentro de la misma empresa | TRD §17 | 49 (51 sin quitar antes los `lead_id` repetidos) | ✅ sí | Corregido en TRD 1.2 (antes 51, que contaba las 2 filas repetidas) |
 | 28 grupos multicanal | TRD §17 | 28 | ✅ sí |  |
 | 12 conversaciones huérfanas | TRD §8.4; TRD §17 | 12 | ✅ sí |  |
 | 25 leads con dos conversaciones | TRD §17 | 25 | ✅ sí |  |
@@ -428,16 +428,13 @@ Método: base de leads únicos. Un lead cuenta como "sin contacto en 24 h" si no
 - 84 conversaciones mencionan más de un modelo: la regla de usar el último modelo es necesaria.
 
 ### Qué contradice
-- Contacto en 1 h frente a 120 h: 3,5 veces (PRD 2.1): calculado 3,56 veces. Diferencia de redondeo: truncar 3,56 da 3,5; redondear da 3,6
-- Manifestó cuota: 11,8 % frente a 8,1 % (TRD §9.2 A): calculado 11,8 % frente a 8,3 % (NO + NO_INFORMA) o 8,7 % (solo NO). Ninguna definición del grupo de comparación reproduce 8,1 %
-- AUC de la regresión logística: 0,555 (TRD §9.1): calculado 0,548 (validación cruzada) · 0,581 (temporal) · 0,590 (en muestra). El TRD no especifica variables ni forma de validación; el valor depende de ambas
-- AUC entre 0,56 y 0,60 con modelos simples (PRD 2.1): calculado 0,548 a 0,602. Depende del AUC de la regresión logística (fila anterior)
-- 51 grupos duplicados dentro de la misma empresa (TRD §17): calculado 49 (51 sin quitar antes los `lead_id` repetidos). La cifra de 51 cuenta las 2 filas con `lead_id` repetido como grupos duplicados
+- Nada frente a PRD 1.2 y TRD 1.2. Las discrepancias de la versión 1.1 se corrigieron con aprobación del responsable.
 
-### Qué ajustes recomienda
-- Corregir en el PRD y el TRD las cifras marcadas con ❌ según la tabla de verificación (requiere aprobación).
-- Documentar el método del porcentaje de leads sin contacto en 24 h, porque el resultado depende de cómo se tratan las fechas con precisión de día.
-- Especificar en el TRD las variables y la validación de la regresión logística, o citar el AUC calculado aquí.
-- Contar los grupos duplicados después de eliminar las filas con `lead_id` repetido, como indica la sección 6 del TRD.
-- Agregar al diccionario de ciudades `bogota` y `bogota d.c.` → Bogotá D.C.
-- Renombrar `capacidad_diaria_leads` a `capacidad_diaria` en la ingesta y anotarlo en el TRD.
+### Ajustes aplicados según el EDA
+- Cifras corregidas: 3,6 veces (PRD 2.1), AUC entre 0,55 y 0,60 (PRD 2.1), 8,3 % sin cuota contra el resto (TRD 9.2), AUC de la regresión logística 0,548 con variables y validación declaradas (TRD 9.1) y 49 grupos duplicados (TRD 17).
+- Método del porcentaje de leads sin contacto en 24 h: las fechas con precisión de día se leen como 00:00 (PRD 2.1 y TRD 17).
+- Los grupos duplicados se cuentan después de eliminar las filas con `lead_id` repetido (TRD 6).
+- Diccionario de ciudades con `bogota` y `bogota d.c.` → Bogotá D.C. (TRD 6).
+- `capacidad_diaria_leads` se renombra a `capacidad_diaria` en la ingesta (TRD 5.1 y 6).
+- Nueva validación cruzada `sin_gestion_con_contacto` (TRD 6.1).
+- Disponibilidad del modelo en el punto de venta (`modelo_disponible_pv`), informativa para el asesor (PRD HU-02; TRD 5.2, 6.2 y 13).
