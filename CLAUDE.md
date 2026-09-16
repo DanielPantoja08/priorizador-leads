@@ -142,9 +142,8 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
   - La consolidación no se reescribe en SQL: una sola implementación, la de `consolidar.py`.
   - `orden` es por asesor: en la vista de empresa se muestra el asesor y se ordena por prioridad.
   - La contraseña de demostración no se teclea en el navegador.
-- **Revisión contra el enunciado** (antes de la Fase F): diagramas en `docs/arquitectura.md`,
-  README con supuestos, API por PostgREST y próximos pasos, `EXTRACTOR=gemini` en `.env.example`,
-  un usuario por asesor activo (40) y 3 gerentes, frase de apertura por lead (plantilla, sin LLM).
-  - `pipeline simulate-policy`: al 70 % de capacidad el puntaje captura 9 cierres más que el orden
-    de llegada (+6,2 %); al 50 %, 20 más (+19,6 %); con cupo para todos, ninguna gana. 279 pruebas.
-  - Falta para entregar: URL pública, workflow programado y presentación.
+- **Revisión contra el enunciado**: `docs/arquitectura.md`, README con supuestos y API, 40 asesores
+  y 3 gerentes, frase de apertura sin LLM, `simulate-policy` (70 %: +9 cierres, +6,2 %). 279 pruebas.
+- **Fase F**: repo público, Supabase remoto (sa-east-1, session pooler 5432), workflow verde a mano y
+  https://priorizador-leads.streamlit.app con aislamiento verificado. Credenciales en `.env.remoto`
+  (ignorado). `setup-uv` sin etiqueta mayor: versión exacta. Falta: cron verde y presentación.
