@@ -598,7 +598,9 @@ El resultado se recorta al rango [−3, +3]. Los pesos son pequeños a propósit
 | En proceso o No contesta | 2 |
 | Contactado | 1 |
 
-Las horas se calculan como `momento_corte − fecha_registro`, donde `momento_corte` es la última fecha y hora de registro o el valor del parámetro.
+Las horas se calculan como `momento_corte − fecha_registro`. `momento_corte` es **el registro más reciente que no pase del final del día de corte**, no el reloj del sistema: si se usara la hora real, el mismo lead cambiaría de puntaje en cada corrida y se rompería la idempotencia (RNF-03); y si se usara la medianoche del parámetro, los leads de ese mismo día tendrían horas negativas.
+
+"Sin contacto" significa **estado `Sin gestión`**. Un lead cuyo estado ya avanzó pero que no tiene `fecha_primer_contacto` sí fue contactado —lo que falta es el dato, y por eso lleva la bandera `estado_sin_fecha_contacto`—, así que puntúa por su estado. Son 76 leads: tratarlos como no contactados le daría 5 puntos de urgencia a un lead cotizado hace un mes.
 
 **Cálculo final**
 
@@ -625,7 +627,9 @@ Aplica el componente A sobre el histórico con gestión (2.021 registros) y repo
 | Caliente (≥ 6) | 15,8 % | 291 | 15,7 % | 83 |
 
 - AUC: 0,577 en entrenamiento (antes del 15 de junio) y 0,602 en prueba. Los pesos se fijaron con criterio sobre las tasas agregadas, y el resultado es estable en el tiempo.
-- **Criterio de aceptación:** la tasa Caliente debe ser al menos 1,8 veces la tasa Frío en la ventana de prueba. Resultado: 2,2 veces.
+- **Criterio de aceptación:** la tasa Caliente debe ser al menos 1,8 veces la tasa Frío en la ventana de prueba. Resultado: 2,16 veces, así que **cumple**.
+
+`uv run python -m pipeline validate-scoring` reproduce esta tabla completa desde los insumos y devuelve código distinto de cero si el criterio deja de cumplirse. Los pesos no se redefinen en el script: se importan de `pipeline/scoring.py`, que es la única fuente de esos números para el pipeline, el EDA y esta validación.
 
 ## 10. Asignación (RF-08)
 
@@ -633,7 +637,7 @@ El algoritmo `assign.py` recorre cada `punto_venta_id`:
 
 1. Toma los leads elegibles ordenados por prioridad.
 2. Toma los asesores con `activo = true` del punto de venta. Los asesores AS-037 y AS-040 quedan excluidos.
-3. Reparte en **serpentina**: A, B, C, C, B, A… Así los primeros leads (los mejores) se distribuyen de forma equilibrada. Un asesor sale del reparto al alcanzar su `capacidad_diaria`.
+3. Reparte en **serpentina**: A, B, C, C, B, A… Así los primeros leads (los mejores) se distribuyen de forma equilibrada. Un asesor sale del reparto al alcanzar su `capacidad_diaria`. Los asesores se ordenan por `asesor_id` para que dos corridas con los mismos insumos produzcan el mismo reparto.
 4. Los leads restantes quedan con `estado = 'sin_cupo'` y `asesor_id = null`, y aparecen en el tablero del gerente.
    - **Prioritarios:** `prioritario = true` si la temperatura es Caliente o si el lead no tiene contacto y lleva menos de 24 h desde el registro (la marca de urgencia de HU-03). El campo se calcula para todos los leads, asignados o no.
    - La marca **no** cambia la asignación: se reparte por prioridad y capacidad. En el tablero, los prioritarios sin cupo aparecen primero y resaltados, para que el gerente decida.
@@ -641,17 +645,20 @@ El algoritmo `assign.py` recorre cada `punto_venta_id`:
 
 La asignación se recalcula completa para cada `fecha_corte`: se borra y se reinserta en una sola transacción. La asignación es estrictamente dentro del punto de venta y de la empresa; no se reparte entre empresas.
 
+**Resultado de la corrida del 2026-09-10:** 981 leads elegibles, 637 asignados y 344 sin cupo, frente a una capacidad de 694 puestos entre los 40 asesores activos. Que sobren leads es el caso normal de operación, no un fallo: por eso existe `sin_cupo` y el tablero del gerente. De los 147 prioritarios, solo 1 quedó sin cupo, porque el orden por prioridad ya los coloca arriba.
+
 ## 11. Orquestación (RF-10)
 
 ### 11.1 CLI (igual en local y en despliegue)
 
-`python -m pipeline` ofrece dos comandos:
+`python -m pipeline` ofrece tres comandos:
 - **`run`** ejecuta todas las etapas con un solo disparo. Acepta `--fecha-corte YYYY-MM-DD` y `--extractor gemini|reglas`.
   1. Abre un registro en `ejecucion`.
   2. Ejecuta las etapas en orden, con una transacción por etapa de carga.
   3. Cierra el registro con los conteos y el estado.
   4. Si ocurre un error no recuperable, sale con código distinto de cero.
-- **`eval`** corre las dos evaluaciones y escribe `evaluation/resultados.md`.
+- **`eval`** evalúa la extracción contra el conjunto de referencia revisado y escribe la tabla en la salida estándar. Con `--con-gemini` mide también el extractor con LLM, que consume cuota.
+- **`validate-scoring`** valida el puntaje contra el histórico (9.3). Sale con código distinto de cero si no se cumple el criterio de aceptación, para que sirva de control en el despliegue.
 
 Las migraciones **no** forman parte de la CLI: las gestiona Supabase CLI.
 
@@ -667,6 +674,7 @@ uv run python -m eda                 # regenera docs/EDA.md (no usa la base)
 uv run python -m pipeline run --fecha-corte 2026-09-10
 uv run python scripts/crear_usuarios_demo.py   # después del pipeline: el usuario asesor referencia la tabla asesor
 uv run python -m pipeline eval
+uv run python -m pipeline validate-scoring
 uv run streamlit run app/streamlit_app.py
 ```
 

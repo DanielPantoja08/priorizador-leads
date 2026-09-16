@@ -114,36 +114,35 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
   - Esta versión de Supabase no concede privilegios por defecto: se conceden en la migración de RLS.
   - Herramientas: Supabase CLI 2.117 (scoop), uv 0.9.24, Docker 28.4, Python 3.12.
   - El EDA reutiliza `pipeline/normalize.py`: una sola implementación de las reglas 6 y 6.1.
-- **Fase C terminada, en punto de control C**:
-  - Extracción con dos implementaciones tras una misma interfaz: `rules` (regex, sin red) y
-    `gemini` (lotes, salida estructurada, reintentos y respaldo por reglas).
-  - Corrida real con Gemini: 677 conversaciones en 68 peticiones, 8,6 min, sin errores ni respaldo.
-    La segunda corrida reusa la caché: 0 peticiones y 3 s.
-  - `pipeline run` incluye la etapa de extracción; `pipeline eval` se niega a evaluar mientras el
-    conjunto de referencia no esté revisado por una persona.
+- **Fase C cerrada**: extracción con dos implementaciones tras una misma interfaz: `rules` (regex,
+  sin red) y `gemini` (lotes, salida estructurada, reintentos y respaldo por reglas). Corrida real:
+  677 conversaciones en 68 peticiones y 8,4 min, sin errores ni respaldo; la segunda reusa la caché
+  (0 peticiones, 3 s).
 - Decisiones de la Fase C:
-  - La plata que el cliente declara de contado se registra en `cuota_inicial_cop`.
-  - "La inicial está muy alta" es objeción de `precio`, no de `sin_inicial`.
-  - Cuota por encima del precio de lista: hasta un 5 % es redondeo del cliente y se recorta; por
-    encima se descarta.
-  - `extraccion` guarda la salida cruda del extractor y la validación corre en cada ejecución, para
-    que los problemas de calidad no dependan de la caché.
-  - La caché de extracción va por `(hash_contenido, extractor, prompt_version)`.
-  - Modelo: **`gemini-3.5-flash-lite`** (`GEMINI_MODEL` en `.env`), elegido por estar en el nivel
-    gratuito y estar pensado para procesamiento simple de datos en volumen. Comprobado con la llave
-    del proyecto: `gemini-3.8-flash` responde 429 (sin cuota) y `gemini-2.5-flash` responde 404
-    ("no longer available to new users"), así que **no sirven como valor por defecto**.
-  - Prompt `v4` (vigente): hablar de cuota inicial es crédito, la objeción se elige por una lista de
-    prioridad con `precio` por encima de `comparando`, y los criterios de intención están
-    enumerados en orden. El `v2` degradó `intencion` (40 -> 35/40) al añadir la lista de objeciones
-    y `v3` la devolvió a 40/40.
-  - **La medición tiene ruido: `temperature = 0` no hace determinista al modelo.** Dos corridas
-    idénticas de las 40 dieron 98,6 % y 99,2 % (4 campos de 360 distintos). Comparar versiones de
-    prompt con una sola corrida no es concluyente; el detalle está en TRD 8.5.
-  - El conjunto de referencia lo propuso la IA y lo revisó una persona; se declara así siempre.
-    La columna de `reglas` parte con ventaja porque las etiquetas se propusieron con esos mismos
-    criterios: la cifra que vale para juzgar la extracción con IA es la de `gemini`.
-  - Si una petición falla entera (cuota, modelo inexistente, respuesta ilegible) **no** se reintenta
-    conversación por conversación: repetiría el mismo error multiplicando la espera por el tamaño
-    del lote. Solo se piden por separado las conversaciones que el modelo omitió en una respuesta
-    que sí llegó.
+  - La plata declarada de contado se registra en `cuota_inicial_cop`; "la inicial está muy alta" es
+    objeción de `precio`. Cuota sobre el precio de lista: hasta 5 % se recorta, por encima se descarta.
+  - `extraccion` guarda la salida cruda y la validación corre siempre, para que los problemas de
+    calidad no dependan de la caché, que va por `(hash_contenido, extractor, prompt_version)`.
+  - Modelo **`gemini-3.5-flash-lite`** (`GEMINI_MODEL`): nivel gratuito y pensado para volumen.
+    `gemini-3.8-flash` responde 429 y `gemini-2.5-flash` responde 404: no sirven por defecto.
+  - Prompt `v4`: hablar de cuota inicial es crédito y `precio` pesa más que `comparando`.
+  - **`temperature = 0` no hace determinista al modelo**: dos corridas de las 40 dieron 98,6 % y
+    99,2 %, así que comparar prompts con una sola corrida no concluye nada (TRD 8.5).
+  - El conjunto de referencia lo propuso la IA y lo revisó una persona; se declara así siempre. La
+    columna de `reglas` parte con ventaja, así que la cifra que vale es la de `gemini`.
+  - Si una petición falla entera no se reintenta una por una: solo se piden por separado las
+    conversaciones que el modelo omitió en una respuesta que sí llegó.
+- **Fase D terminada, en punto de control D**:
+  - `scoring.py` (puntaje v1, temperatura y razones) y `assign.py` (serpentina con capacidad).
+  - Corrida 2026-09-10: 981 elegibles, 637 asignados y 344 sin cupo (capacidad activa 694);
+    780 Frío, 142 Caliente y 59 Tibio. Huellas iguales entre corridas: es idempotente.
+  - `pipeline validate-scoring` reproduce el TRD 9.3: Caliente/Frío 2,16 veces (criterio 1,8).
+- Decisiones de la Fase D:
+  - Un lead con estado avanzado y sin fecha de contacto puntúa por su estado, no por la espera: el
+    contacto ocurrió y lo que falta es el dato (ya lleva `estado_sin_fecha_contacto`).
+  - `momento_corte` es el último registro del día de corte, no el reloj: conserva la idempotencia.
+  - La serpentina ordena los asesores por `asesor_id` para que el reparto sea reproducible.
+  - Los pesos viven solo en `pipeline/scoring.py`; el EDA y la validación los importan, así que
+    regenerar el EDA tras el refactor dio un archivo idéntico.
+  - 565 de los 981 elegibles no tienen conversación: su techo son 2 puntos y quedan en Frío. Es la
+    limitación declarada en TRD 9.2, no un defecto.
