@@ -43,7 +43,8 @@ _SIN_INICIAL = re.compile(
 # Forma de pago, cita y cotización
 # ---------------------------------------------------------------------------
 _CONTADO = re.compile(r"\b(de |al )?contado\b|la plata lista", re.I)
-_CREDITO = re.compile(r"financiad|financiar|\bcr[eé]dito\b|\bcuotas\b", re.I)
+# Hablar de cuota inicial es financiar, aunque el cliente no diga "financiada" (criterio del prompt v2).
+_CREDITO = re.compile(r"financiad|financiar|\bcr[eé]dito\b|\bcuotas\b|\binicial\b", re.I)
 
 # "voy" solo cuenta con un complemento de desplazamiento: "voy a consultar" no es una visita.
 _CITA = re.compile(

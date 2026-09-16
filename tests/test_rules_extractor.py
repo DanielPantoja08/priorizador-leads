@@ -148,6 +148,17 @@ def test_objeciones(texto: str, objecion: str) -> None:
     assert extraer(texto).objecion == objecion
 
 
+def test_hablar_de_inicial_implica_credito() -> None:
+    # El cliente nunca dice "financiada", pero hablar de inicial es estar financiando.
+    e = extraer("Esa sí me sirve. Tengo 2 millones de inicial")
+    assert e.forma_pago == "credito"
+    assert e.cuota_inicial_cop == 2_000_000
+
+
+def test_no_tener_inicial_tambien_es_credito() -> None:
+    assert extraer("No tengo inicial").forma_pago == "credito"
+
+
 def test_contado_gana_sobre_credito() -> None:
     e = extraer("De contado, ya tengo la plata lista, 7,2 millones")
     assert e.forma_pago == "contado"
