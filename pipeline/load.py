@@ -9,6 +9,7 @@ import psycopg
 
 from pipeline import db
 from pipeline.catalog_match import Catalogo
+from pipeline.extract.schema import Extraccion
 from pipeline.ingest import hash_mensajes
 from pipeline.normalize import a_bogota, hora_mensaje, resolver_fecha
 from pipeline.quality import ColectorCalidad
@@ -126,6 +127,43 @@ def cargar_conversaciones(
         )
         n_msj = db.upsert(cur, "mensaje", filas_msj, ["conversacion_id", "orden"])
     return {"conversacion": n_conv, "mensaje": n_msj}
+
+
+CAMPOS_CACHE = (
+    "conversacion_id", "modelo_texto", "cuota_inicial_cop", "menciona_cuota", "forma_pago",
+    "intencion", "objecion", "pidio_cita", "pidio_cotizacion", "cliente_respondio", "evidencia",
+)  # fmt: skip
+
+
+def extracciones_cacheadas(
+    conn: psycopg.Connection, extractor: str, version: str
+) -> dict[str, Extraccion]:
+    """Extracciones ya calculadas para ese extractor y versión, por `hash_contenido` (TRD 8.2).
+
+    Cambiar el prompt sube la versión, así que la caché anterior deja de usarse sin borrarla.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            f"select hash_contenido, {', '.join(CAMPOS_CACHE)} from public.extraccion "
+            "where extractor = %s and prompt_version = %s",
+            (extractor, version),
+        )
+        filas = cur.fetchall()
+    cache = {}
+    for fila in filas:
+        datos = dict(zip(("hash_contenido", *CAMPOS_CACHE), fila, strict=True))
+        huella = datos.pop("hash_contenido")
+        # Los nulos de la base se descartan para que el modelo use sus valores por defecto.
+        cache[huella] = Extraccion(**{k: v for k, v in datos.items() if v is not None})
+    return cache
+
+
+def cargar_extracciones(conn: psycopg.Connection, filas: list[dict]) -> int:
+    """Guarda las extracciones por su clave de caché (hash_contenido, extractor, prompt_version)."""
+    with conn.transaction(), conn.cursor() as cur:
+        return db.upsert(
+            cur, "extraccion", filas, ["hash_contenido", "extractor", "prompt_version"]
+        )
 
 
 def reemplazar_problemas(

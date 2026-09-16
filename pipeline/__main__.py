@@ -14,6 +14,7 @@ from datetime import date
 
 from pipeline import catalog_match, db, dedup, ingest, load, normalize
 from pipeline.config import cargar_config
+from pipeline.extract import etapa as etapa_extraccion
 from pipeline.quality import ColectorCalidad
 
 
@@ -46,10 +47,28 @@ def ejecutar(fecha_corte: date | None) -> int:
             conteos["historico_cierre"] = load.cargar_historico(conn, historico)
             conteos.update(load.cargar_clientes_y_leads(conn, clientes, leads, colector))
             conteos.update(load.cargar_conversaciones(conn, insumos.conversaciones, leads))
+
+            # Extracción: necesita las conversaciones ya cargadas por la llave foránea.
+            # `_senales` alimenta el puntaje y la asignación en la Fase D.
+            _senales, conteos_extraccion = etapa_extraccion.ejecutar(
+                conn, config, insumos.conversaciones, leads, catalogo, colector
+            )
+            conteos.update(conteos_extraccion)
+
             conteos["problema_calidad"] = load.reemplazar_problemas(conn, ejecucion_id, colector)
             conteos["duracion_s"] = round(time.perf_counter() - inicio, 1)
 
-            db.cerrar_ejecucion(conn, ejecucion_id, "ok", corte, conteos)
+            # Si alguna conversación la resolvió el respaldo, la corrida lo declara (TRD 8.2).
+            estado = "ok_con_respaldo" if conteos.get("extraccion_respaldo") else "ok"
+            db.cerrar_ejecucion(
+                conn,
+                ejecucion_id,
+                estado,
+                corte,
+                conteos,
+                llamadas_llm=conteos.get("llamadas_llm", 0),
+                errores_llm=conteos.get("errores_llm", 0),
+            )
         except Exception as error:  # la corrida queda registrada como error y sale con código 1
             conn.rollback()
             db.cerrar_ejecucion(conn, ejecucion_id, "error", None, conteos, repr(error))
@@ -77,8 +96,11 @@ def main() -> None:
         if args.extractor:
             os.environ["EXTRACTOR"] = args.extractor
         sys.exit(ejecutar(args.fecha_corte))
-    print("El comando eval se implementa en la Fase C.", file=sys.stderr)
-    sys.exit(2)
+
+    # eval: compara los extractores contra el conjunto de referencia revisado (TRD 8.5).
+    from evaluation.eval_extraction import main as evaluar_extraccion
+
+    sys.exit(evaluar_extraccion())
 
 
 if __name__ == "__main__":
