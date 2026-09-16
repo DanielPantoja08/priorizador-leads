@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from collections import Counter
+from datetime import date
 
 import pandas as pd
 import psycopg
+from psycopg.types.json import Jsonb
 
 from pipeline import db
 from pipeline.catalog_match import Catalogo
@@ -13,6 +15,7 @@ from pipeline.extract.schema import Extraccion
 from pipeline.ingest import hash_mensajes
 from pipeline.normalize import a_bogota, hora_mensaje, resolver_fecha
 from pipeline.quality import ColectorCalidad
+from pipeline.scoring import VERSION_SCORE
 
 
 def cargar_referencia(
@@ -164,6 +167,61 @@ def cargar_extracciones(conn: psycopg.Connection, filas: list[dict]) -> int:
         return db.upsert(
             cur, "extraccion", filas, ["hash_contenido", "extractor", "prompt_version"]
         )
+
+
+def cargar_score(conn: psycopg.Connection, puntajes: list, fecha_corte: date) -> int:
+    """Guarda el puntaje de cada lead para esa fecha de corte y versión (TRD 9.2).
+
+    La clave primaria es (lead_id, fecha_corte, version_score), así que volver a correr la misma
+    fecha reescribe las mismas filas: el resultado no depende de cuántas veces se ejecute.
+    """
+    filas = [
+        {
+            "lead_id": p.lead_id,
+            "fecha_corte": fecha_corte,
+            "version_score": VERSION_SCORE,
+            "empresa_id": p.empresa_id,
+            "puntos_calidad": p.puntos_calidad,
+            "puntos_conversacion": p.puntos_conversacion,
+            "puntos_urgencia": p.puntos_urgencia,
+            "prioridad": p.prioridad,
+            "temperatura": p.temperatura,
+            # `razones` es una lista de objetos: se envía como jsonb, no como arreglo de Postgres.
+            "razones": Jsonb(p.razones),
+        }
+        for p in puntajes
+    ]
+    with conn.transaction(), conn.cursor() as cur:
+        return db.upsert(cur, "score", filas, ["lead_id", "fecha_corte", "version_score"])
+
+
+def cargar_asignacion(conn: psycopg.Connection, asignaciones: list, fecha_corte: date) -> dict:
+    """Reemplaza por completo la asignación de esa fecha de corte (TRD 10).
+
+    Se borra y se reinserta dentro de una misma transacción: si el reparto cambia porque cambió
+    la capacidad o llegaron leads nuevos, no pueden quedar restos del reparto anterior.
+    """
+    filas = [
+        {
+            "fecha_corte": fecha_corte,
+            "lead_id": a.lead_id,
+            "empresa_id": a.empresa_id,
+            "asesor_id": a.asesor_id,
+            "orden": a.orden,
+            "estado": a.estado,
+            "prioritario": a.prioritario,
+        }
+        for a in asignaciones
+    ]
+    with conn.transaction(), conn.cursor() as cur:
+        cur.execute("delete from public.asignacion where fecha_corte = %s", (fecha_corte,))
+        db.upsert(cur, "asignacion", filas, ["fecha_corte", "lead_id"])
+    return {
+        "asignacion": len(filas),
+        "asignacion_asignados": sum(1 for a in asignaciones if a.estado == "asignado"),
+        "asignacion_sin_cupo": sum(1 for a in asignaciones if a.estado == "sin_cupo"),
+        "asignacion_prioritarios": sum(1 for a in asignaciones if a.prioritario),
+    }
 
 
 def reemplazar_problemas(

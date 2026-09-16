@@ -1,7 +1,7 @@
 """CLI del pipeline (TRD 11.1): `uv run python -m pipeline run` y `uv run python -m pipeline eval`.
 
-En la Fase B, `run` ejecuta ingesta, normalización, deduplicación y carga.
-Las etapas de extracción, puntaje y asignación se agregan en las fases C y D.
+`run` ejecuta la cadena completa: ingesta, normalización, deduplicación, carga, extracción con IA,
+puntaje y asignación. Todas las etapas son idempotentes (RNF-03).
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import sys
 import time
 from datetime import date
 
-from pipeline import catalog_match, db, dedup, ingest, load, normalize
+from pipeline import assign, catalog_match, db, dedup, ingest, load, normalize, scoring
 from pipeline.config import cargar_config
 from pipeline.extract import etapa as etapa_extraccion
 from pipeline.quality import ColectorCalidad
@@ -49,11 +49,20 @@ def ejecutar(fecha_corte: date | None) -> int:
             conteos.update(load.cargar_conversaciones(conn, insumos.conversaciones, leads))
 
             # Extracción: necesita las conversaciones ya cargadas por la llave foránea.
-            # `_senales` alimenta el puntaje y la asignación en la Fase D.
-            _senales, conteos_extraccion = etapa_extraccion.ejecutar(
+            senales, conteos_extraccion = etapa_extraccion.ejecutar(
                 conn, config, insumos.conversaciones, leads, catalogo, colector
             )
             conteos.update(conteos_extraccion)
+
+            # Puntaje y asignación (TRD 9 y 10). Las horas de urgencia se miden contra el último
+            # registro del día de corte, no contra el reloj: así la corrida es reproducible.
+            precios = dict(
+                zip(catalogo.modelos["sku"], catalogo.modelos["precio_lista"], strict=True)
+            )
+            momento = scoring.momento_corte(leads, corte)
+            puntajes = scoring.calcular(leads, senales, precios, momento, config.ventana_dias)
+            conteos["score"] = load.cargar_score(conn, puntajes, corte)
+            conteos.update(load.cargar_asignacion(conn, assign.asignar(puntajes, asesores), corte))
 
             conteos["problema_calidad"] = load.reemplazar_problemas(conn, ejecucion_id, colector)
             conteos["duracion_s"] = round(time.perf_counter() - inicio, 1)
@@ -89,18 +98,24 @@ def main() -> None:
     run.add_argument(
         "--extractor", choices=["gemini", "reglas"], default=None, help="se usa desde la Fase C"
     )
-    evaluacion = comandos.add_parser("eval", help="evaluaciones (Fase C y D)")
+    evaluacion = comandos.add_parser("eval", help="evalúa la extracción contra el gold (TRD 8.5)")
     evaluacion.add_argument(
         "--con-gemini",
         action="store_true",
         help="además de la línea base por reglas, evalúa con Gemini (consume cuota)",
     )
+    comandos.add_parser("validate-scoring", help="valida el puntaje contra el histórico (TRD 9.3)")
     args = parser.parse_args()
 
     if args.comando == "run":
         if args.extractor:
             os.environ["EXTRACTOR"] = args.extractor
         sys.exit(ejecutar(args.fecha_corte))
+
+    if args.comando == "validate-scoring":
+        from evaluation.validate_scoring import main as validar_puntaje
+
+        sys.exit(validar_puntaje())
 
     # eval: compara los extractores contra el conjunto de referencia revisado (TRD 8.5).
     from evaluation.eval_extraction import main as evaluar_extraccion
