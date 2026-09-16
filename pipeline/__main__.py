@@ -89,7 +89,12 @@ def main() -> None:
     run.add_argument(
         "--extractor", choices=["gemini", "reglas"], default=None, help="se usa desde la Fase C"
     )
-    comandos.add_parser("eval", help="evaluaciones (Fase C y D)")
+    evaluacion = comandos.add_parser("eval", help="evaluaciones (Fase C y D)")
+    evaluacion.add_argument(
+        "--con-gemini",
+        action="store_true",
+        help="además de la línea base por reglas, evalúa con Gemini (consume cuota)",
+    )
     args = parser.parse_args()
 
     if args.comando == "run":
@@ -100,7 +105,7 @@ def main() -> None:
     # eval: compara los extractores contra el conjunto de referencia revisado (TRD 8.5).
     from evaluation.eval_extraction import main as evaluar_extraccion
 
-    sys.exit(evaluar_extraccion())
+    sys.exit(evaluar_extraccion(con_gemini=args.con_gemini))
 
 
 if __name__ == "__main__":

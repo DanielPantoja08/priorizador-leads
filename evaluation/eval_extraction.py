@@ -9,6 +9,7 @@ Uso: `uv run python -m pipeline eval`
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -99,8 +100,34 @@ def tabla_markdown(marcadores: dict[str, dict[str, tuple[int, int]]]) -> str:
     return "\n".join(lineas)
 
 
-def main(ruta_gold: Path = RUTA_GOLD) -> int:
-    """Corre la evaluación y escribe la tabla en la salida estándar."""
+def extractor_gemini(marcas: list[str]) -> object | None:
+    """Arma el extractor con Gemini leyendo `.env`, o devuelve None si no hay credenciales."""
+    from dotenv import load_dotenv
+
+    load_dotenv(RAIZ / ".env")
+    llave = os.getenv("GEMINI_API_KEY", "").strip()
+    if not llave:
+        return None
+
+    from google import genai
+
+    from pipeline.extract.etapa import MODELO_GEMINI_POR_DEFECTO
+    from pipeline.extract.gemini import ExtractorGemini
+
+    return ExtractorGemini(
+        cliente=genai.Client(api_key=llave),
+        modelo=os.getenv("GEMINI_MODEL", "").strip() or MODELO_GEMINI_POR_DEFECTO,
+        respaldo=ExtractorReglas(marcas),
+        tamano_lote=int(os.getenv("LLM_BATCH_SIZE") or 10),
+        max_rpm=int(os.getenv("LLM_MAX_RPM") or 5),
+    )
+
+
+def main(ruta_gold: Path = RUTA_GOLD, con_gemini: bool = False) -> int:
+    """Corre la evaluación y escribe la tabla en la salida estándar.
+
+    `con_gemini` es opcional porque consume cuota del servicio: sin él solo se mide la línea base.
+    """
     try:
         referencia = cargar_referencia(ruta_gold)
     except (FileNotFoundError, ValueError) as error:
@@ -124,10 +151,24 @@ def main(ruta_gold: Path = RUTA_GOLD) -> int:
         )
     }
 
+    nota = ""
+    if con_gemini:
+        gemini = extractor_gemini(marcas)
+        if gemini is None:
+            print("Sin GEMINI_API_KEY: se evalúa solo la línea base por reglas.", file=sys.stderr)
+        else:
+            salida = {e.conversacion_id: e for e in gemini.extraer(seleccionadas)}
+            marcadores = {"gemini": evaluar(referencia, salida), **marcadores}
+            respaldadas = len(getattr(gemini, "resueltas_por_respaldo", ()))
+            if respaldadas:
+                # Se declara: esas filas las resolvieron las reglas, no el modelo.
+                nota = f"\n{respaldadas} conversaciones las resolvió el respaldo por reglas."
+
     print(f"Conjunto de referencia: {len(referencia)} conversaciones revisadas\n")
     print(tabla_markdown(marcadores))
+    print(nota)
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(con_gemini="--con-gemini" in sys.argv))
