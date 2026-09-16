@@ -69,6 +69,9 @@ class ExtractorGemini:
         self.llamadas = 0
         self.errores = 0
         self.uso_respaldo = False
+        # Conversaciones que terminó resolviendo el extractor por reglas: su fila en la base
+        # se guarda con extractor='reglas' (TRD 8.2), no con 'gemini'.
+        self.resueltas_por_respaldo: set[str] = set()
 
     # -- llamada al servicio ------------------------------------------------
     def _esperar_turno(self) -> None:
@@ -147,9 +150,12 @@ class ExtractorGemini:
                 faltantes, self.respaldo.extraer(faltantes), strict=True
             ):
                 obtenidas[conversacion["conversacion_id"]] = extraccion
+                self.resueltas_por_respaldo.add(conversacion["conversacion_id"])
 
         return [obtenidas[c["conversacion_id"]] for c in conversaciones]
 
-    def extractor_de(self, extraccion: Extraccion) -> str:
-        """Qué extractor resolvió una extracción; se guarda en la columna `extractor`."""
-        return self.respaldo.nombre if self.uso_respaldo else self.nombre
+    def extractor_de(self, conversacion_id: str) -> str:
+        """Qué extractor resolvió esa conversación; se guarda en la columna `extractor`."""
+        if conversacion_id in self.resueltas_por_respaldo:
+            return self.respaldo.nombre
+        return self.nombre

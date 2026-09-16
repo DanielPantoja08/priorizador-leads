@@ -158,6 +158,16 @@ def test_agota_reintentos_y_usa_respaldo() -> None:
     assert resultado[0].conversacion_id == "CONV-A"
 
 
+def test_registra_que_conversacion_resolvio_el_respaldo() -> None:
+    # El lote responde solo por A; B falla incluso en su reintento individual.
+    convs = [conversacion("CONV-A"), conversacion("CONV-B")]
+    extractor = construir([respuesta_de("CONV-A"), "no es json"], tamano_lote=2)
+    extractor.extraer(convs)
+    assert extractor.resueltas_por_respaldo == {"CONV-B"}
+    assert extractor.extractor_de("CONV-A") == "gemini"
+    assert extractor.extractor_de("CONV-B") == "reglas"
+
+
 def test_no_reintenta_errores_del_cliente() -> None:
     # Un 400 es culpa de la petición: reintentarlo solo gasta cuota.
     extractor = construir(
