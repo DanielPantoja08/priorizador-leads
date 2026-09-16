@@ -21,7 +21,7 @@ supabase db reset                    # aplica migraciones y seed.sql
 uv run python -m eda                 # regenera docs/EDA.md y docs/img/eda/
 uv run python -m pipeline run --fecha-corte 2026-09-10
 uv run python scripts/crear_usuarios_demo.py   # después del pipeline (el asesor demo debe existir)
-uv run python -m pipeline eval
+uv run python -m pipeline eval          # y validate-scoring, simulate-policy
 uv run streamlit run app/streamlit_app.py
 ```
 Antes de cada commit: `uv run ruff check .`, `uv run ruff format .` y `uv run pytest -q`.
@@ -135,16 +135,16 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
 - **Fase E terminada, en punto de control E**:
   - `senales_lead` guarda las señales y su procedencia (`extractor`, `prompt_version`); la vista
     diaria las expone. Migraciones con `supabase migration up --local` para no perder la caché.
-  - `app/streamlit_app.py`: lista del asesor, tablero del gerente y «Cómo prioriza». Probada con
-    Playwright: 4 defectos encontrados y corregidos (evidencia mezclada, `orden` flotante, columna
-    `#` a unos, cabeceras crudas).
+  - `app/streamlit_app.py`: lista del asesor, tablero y «Cómo prioriza». Probada con Playwright:
+    4 defectos corregidos (evidencia mezclada, `orden` flotante, `#` a unos, cabeceras crudas).
 - Decisiones de la Fase E:
   - El aislamiento se prueba en la base, no en la interfaz: la app usa la llave anónima y el JWT.
   - La consolidación no se reescribe en SQL: una sola implementación, la de `consolidar.py`.
   - `orden` es por asesor: en la vista de empresa se muestra el asesor y se ordena por prioridad.
   - La contraseña de demostración no se teclea en el navegador.
-- **Revisión contra el enunciado** (antes de la Fase F):
-  - `docs/arquitectura.md` (diagramas), README con supuestos y próximos pasos, `.env.example` con
-    `EXTRACTOR=gemini`, y pruebas de app, `db`, evaluación y etapa: **248 en total**.
-  - `crear_usuarios_demo.py`: un usuario por asesor activo (40) y 3 gerentes (AS-001 -> as001).
+- **Revisión contra el enunciado** (antes de la Fase F): diagramas en `docs/arquitectura.md`,
+  README con supuestos, API por PostgREST y próximos pasos, `EXTRACTOR=gemini` en `.env.example`,
+  un usuario por asesor activo (40) y 3 gerentes, frase de apertura por lead (plantilla, sin LLM).
+  - `pipeline simulate-policy`: al 70 % de capacidad el puntaje captura 9 cierres más que el orden
+    de llegada (+6,2 %); al 50 %, 20 más (+19,6 %); con cupo para todos, ninguna gana. 275 pruebas.
   - Falta para entregar: URL pública, workflow programado y presentación.

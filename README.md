@@ -72,6 +72,34 @@ no participaron en la elección de los pesos.
 Un Caliente cierra **2,16 veces** más que un Frío; el criterio de aceptación era 1,8. El AUC es
 0,577 en entrenamiento y 0,602 en prueba: **el puntaje ordena, no predice con certeza.**
 
+### Cuántos cierres más son (`uv run python -m pipeline simulate-policy`)
+
+El AUC dice que el puntaje ordena; esto dice qué significa eso en ventas. Sobre el mismo histórico
+se simulan las dos políticas bajo la misma capacidad diaria —orden de llegada, que es lo que se
+hace hoy, contra orden por puntaje— y se cuentan los cierres que alcanzan a entrar en el cupo:
+
+| Capacidad diaria | Orden de llegada | Al azar | **Priorizado** | Ganancia |
+|---|---|---|---|---|
+| 50 % de la demanda | 102 | 102,6 | **122** | +20 (19,6 %) |
+| 70 % de la demanda | 145 | 145,3 | **154** | +9 (6,2 %) |
+| 90 % de la demanda | 185 | 183,5 | **187** | +2 (1,1 %) |
+| 100 % de la demanda | 197 | 197,0 | **197** | +0 (0,0 %) |
+
+Hoy hay 694 cupos para 981 leads elegibles, o sea el 71 % de la demanda. Ahí priorizar captura
+**9 cierres más** que el orden de llegada en los cinco meses del histórico, un 6,2 %.
+
+Lo que más importa de esta tabla no es el número sino la forma: **la ganancia depende de cuán
+escaso sea el cupo.** Con capacidad para todos ninguna política gana, porque no sobra nadie por
+atender; con capacidad para la mitad, la ventaja sube al 19,6 %. Priorizar paga cuando hay que
+dejar gente sin llamar, que es justamente el problema que describe el gerente.
+
+La columna «al azar» es el control: el promedio de 200 barajadas con semilla fija. Queda pegada a
+la del orden de llegada, que es lo que debe pasar si el orden actual no aporta información.
+
+Descansa en un supuesto explícito: **el desenlace es propiedad del lead, no del orden en que se
+atendió.** Un lead que cerró y queda fuera del cupo se cuenta como perdido, y el histórico no trae
+hora dentro del día, así que la llegada se aproxima con el `lead_id`, que es correlativo.
+
 ---
 
 ## El componente de IA
@@ -123,6 +151,25 @@ Dos advertencias que conviene leer antes que las cifras:
 sesiones reales: 11 pruebas que verifican que un usuario de EMP-01 no ve una sola fila de otra
 empresa, en seis tablas y en la vista diaria.
 
+### La misma lista, como API
+
+No hubo que construirla: Supabase publica cada vista por PostgREST, así que `v_mis_leads_hoy` **ya
+es una API REST** y responde con las mismas políticas que la app. El JWT decide qué filas salen.
+
+```bash
+# 1. Iniciar sesión y quedarse con el token del usuario
+TOKEN=$(curl -s "$SUPABASE_URL/auth/v1/token?grant_type=password" \
+  -H "apikey: $SUPABASE_ANON_KEY" -H "Content-Type: application/json" \
+  -d "{\"email\":\"asesor.as001@example.com\",\"password\":\"$DEMO_PASSWORD\"}" | jq -r .access_token)
+
+# 2. Pedir la lista priorizada del día
+curl -s "$SUPABASE_URL/rest/v1/v_mis_leads_hoy?fecha_corte=eq.2026-09-10&order=orden" \
+  -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $TOKEN"
+```
+
+Con el token de un asesor devuelve sus 12 leads; con el de un gerente, los de toda su empresa. No
+hay endpoints de escritura: `authenticated` solo tiene `select`.
+
 ---
 
 ## Cómo ejecutarlo
@@ -142,7 +189,8 @@ uv run python -m pipeline run --fecha-corte 2026-09-10
 uv run python scripts/crear_usuarios_demo.py   # después del pipeline
 
 uv run python -m pipeline eval --con-gemini    # evalúa la extracción
-uv run python -m pipeline validate-scoring     # valida el puntaje
+uv run python -m pipeline validate-scoring     # valida el puntaje contra el histórico
+uv run python -m pipeline simulate-policy      # mide los cierres que captura priorizar
 uv run streamlit run app/streamlit_app.py
 ```
 
@@ -156,7 +204,7 @@ mostrar con cualquier asesor y no solo con uno. La contraseña es la de `DEMO_PA
 comparte fuera del repositorio.
 
 Antes de cada commit: `uv run ruff check .`, `uv run ruff format .` y `uv run pytest -q`
-(**248 pruebas**; ninguna llama a servicios externos, salvo la de aislamiento, que usa el Supabase
+(**275 pruebas**; ninguna llama a servicios externos, salvo la de aislamiento, que usa el Supabase
 local y se omite sola si no está en ejecución).
 
 ---
