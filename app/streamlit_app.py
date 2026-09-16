@@ -152,6 +152,21 @@ def horas_desde(valor: str | datetime | None, corte: date) -> float | None:
     return round((fin - registro).total_seconds() / 3600, 1)
 
 
+def lead_de(df: pd.DataFrame, lead_id: str) -> dict:
+    """La fila de un lead como diccionario, con los nulos como `None`.
+
+    Al pasar por pandas, un nulo en una columna numérica o mixta sale como `NaN`, y `NaN` es
+    verdadero: `lead.get("ia_objecion") and ...` lo dejaba pasar y la app se caía, o escribía
+    «tiene — de inicial» y «Pidió cita» a quien no dijo nada de eso. Las listas (`razones`) se
+    dejan intactas.
+    """
+    fila = df[df["lead_id"] == lead_id].iloc[0].to_dict()
+    return {
+        clave: None if not isinstance(valor, list | dict) and pd.isna(valor) else valor
+        for clave, valor in fila.items()
+    }
+
+
 def pesos(valor: object) -> str:
     """Cifra en pesos colombianos, con puntos de miles."""
     if valor is None or pd.isna(valor):
@@ -354,7 +369,7 @@ def pantalla_leads(sb: Client, perfil: dict, corte: date) -> None:
         ] = r["lead_id"]
     if etiquetas:
         elegido = etiquetas[st.selectbox("Lead", list(etiquetas), label_visibility="collapsed")]
-        detalle(sb, df[df["lead_id"] == elegido].iloc[0].to_dict(), corte)
+        detalle(sb, lead_de(df, elegido), corte)
 
 
 def pantalla_tablero(sb: Client, corte: date) -> None:

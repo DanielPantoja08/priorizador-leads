@@ -12,7 +12,7 @@ from datetime import date, datetime
 import pandas as pd
 import pytest
 
-from app.streamlit_app import frase_de_apertura, horas_desde, pesos, tabla_de
+from app.streamlit_app import frase_de_apertura, horas_desde, lead_de, pesos, tabla_de
 
 CORTE = date(2026, 9, 10)
 
@@ -212,6 +212,56 @@ def test_el_pago_de_contado_se_dice_asi() -> None:
 def test_la_cotizacion_se_menciona_cuando_no_hubo_cita() -> None:
     frase = frase_de_apertura(fila(ia_pidio_cita=False, ia_pidio_cotizacion=True), CORTE)
     assert "Pidió cotización" in frase
+
+
+# --------------------------------------------------------------------------------------
+# lead_de: la fila tal como la recibe el detalle
+# --------------------------------------------------------------------------------------
+
+
+def como_en_la_app(*filas: dict) -> pd.DataFrame:
+    # La app arma el DataFrame directo del JSON de PostgREST, sin dtype: así los nulos de las
+    # columnas numéricas o mixtas se vuelven NaN. `marco()` no sirve aquí porque los conserva.
+    return pd.DataFrame(list(filas))
+
+
+def lead_frio(**cambios) -> dict:
+    """Un lead con conversación pero sin cuota, sin objeción y sin cita: el caso que rompía."""
+    return fila(
+        lead_id="L-2", temperatura="Frío", prioridad=1, ia_cuota_inicial_cop=None,
+        ia_objecion=None, ia_pidio_cita=None, ia_pidio_cotizacion=None, ia_cliente_respondio=None,
+    ) | cambios  # fmt: skip
+
+
+def test_los_nulos_llegan_como_none_y_no_como_nan() -> None:
+    df = como_en_la_app(fila(lead_id="L-1", ia_objecion="precio"), lead_frio())
+    lead = lead_de(df, "L-2")
+    assert lead["ia_objecion"] is None
+    assert lead["ia_cuota_inicial_cop"] is None
+    assert lead["ia_pidio_cita"] is None
+
+
+def test_la_frase_de_un_lead_sin_objecion_no_rompe_el_detalle() -> None:
+    # Con NaN, `lead.get("ia_objecion") and ...` era verdadero y `.replace` lanzaba AttributeError.
+    df = como_en_la_app(fila(lead_id="L-1", ia_objecion="precio"), lead_frio())
+    frase = frase_de_apertura(lead_de(df, "L-2"), CORTE)
+    assert "Ojo" not in frase
+
+
+def test_un_nulo_no_se_convierte_en_un_dato_inventado() -> None:
+    # NaN también hacía decir «tiene — de inicial» y «Pidió cita» a quien no dijo nada de eso.
+    df = como_en_la_app(fila(lead_id="L-1"), lead_frio())
+    frase = frase_de_apertura(lead_de(df, "L-2"), CORTE)
+    assert "de inicial" not in frase
+    assert "Pidió cita" not in frase and "Pidió cotización" not in frase
+    assert "No respondió al último mensaje" in frase
+
+
+def test_las_razones_se_conservan_como_lista() -> None:
+    razones = [{"factor": "sin contacto", "valor": 16, "puntos": 3}]
+    df = como_en_la_app(fila(lead_id="L-1", razones=razones), lead_frio(razones=None))
+    assert lead_de(df, "L-1")["razones"] == razones
+    assert lead_de(df, "L-2")["razones"] is None
 
 
 def test_una_conversacion_sin_datos_no_inventa_nada() -> None:
