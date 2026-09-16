@@ -19,8 +19,13 @@ from eda.comun import (
     wilson,
     z_dos_proporciones,
 )
+from pipeline.scoring import CORTE_TEMPORAL as _CORTE_TEMPORAL
+from pipeline.scoring import PESOS_CALIDAD, PRECIO_ALTO, temperatura_de
 
-CORTE_TEMPORAL = "2026-06-15"  # entrenamiento antes, prueba desde esta fecha (TRD 9.3)
+# Entrenamiento antes de esta fecha, prueba desde ella (TRD 9.3). El histórico se lee como texto,
+# así que se compara en formato ISO.
+CORTE_TEMPORAL = _CORTE_TEMPORAL.isoformat()
+TEMPERATURAS = ["Frío", "Tibio", "Caliente"]
 SEMILLA = 0
 
 
@@ -33,14 +38,20 @@ def preparar(historico: pd.DataFrame, catalogo: pd.DataFrame) -> pd.DataFrame:
     df["cerrado"] = (df["desenlace"] == "Cerrado").astype(int)
     df["cita"] = (df["pidio_cita"] == "SI").astype(int)
     df["cuota"] = (df["manifesto_cuota_inicial"] == "SI").astype(int)
-    df["precio_10m"] = (df["precio"] >= 10_000_000).astype(int)
+    df["precio_10m"] = (df["precio"] >= PRECIO_ALTO).astype(int)
     df["contado"] = (df["forma_pago_declarada"] == "contado").astype(int)
     segmentos = {f"{f.marca} {f.linea}": f.segmento for f in catalogo.itertuples()}
     df["segmento"] = df["modelo_cotizado"].map(segmentos)
-    # Componente A del puntaje v1 (TRD 9.2): cita +3, cuota +3, precio >= 10 M +2, contado +1.
-    df["puntos_a"] = 3 * df["cita"] + 3 * df["cuota"] + 2 * df["precio_10m"] + df["contado"]
-    df["temperatura"] = pd.cut(
-        df["puntos_a"], bins=[-1, 2, 5, 9], labels=["Frío", "Tibio", "Caliente"]
+    # Componente A del puntaje v1 (TRD 9.2). Los pesos y los cortes de temperatura salen de
+    # `pipeline.scoring`: una sola fuente para el análisis, el pipeline y la validación.
+    df["puntos_a"] = (
+        PESOS_CALIDAD["cita"] * df["cita"]
+        + PESOS_CALIDAD["cuota"] * df["cuota"]
+        + PESOS_CALIDAD["precio_alto"] * df["precio_10m"]
+        + PESOS_CALIDAD["contado"] * df["contado"]
+    )
+    df["temperatura"] = pd.Categorical(
+        df["puntos_a"].map(temperatura_de), categories=TEMPERATURAS, ordered=True
     )
     df["prueba"] = df["fecha_registro"] >= CORTE_TEMPORAL
     return df
