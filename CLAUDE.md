@@ -85,35 +85,21 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
 - `data/raw/` no se modifica nunca.
 
 ## Estado actual
-- **Fase A cerrada**:
-  - Repositorio inicializado con uv, Supabase CLI y el hook de atribución.
-  - EDA generado en `docs/EDA.md`; es determinista.
-  - PRD 1.2 y TRD 1.2 corregidos según el EDA y aprobados por el responsable.
-- **Decisiones aprobadas en el punto de control A**:
-  - Tasa sin cuota calculada contra el resto (8,3 %).
-  - Sin contacto en 24 h con el método medianoche.
-  - Grupos duplicados contados después de quitar las filas con `lead_id` repetido.
-  - `modelo_disponible_pv` informativo en la app.
-  - `bogota` y `bogota d.c.` → Bogotá D.C.
-  - `capacidad_diaria_leads` → `capacidad_diaria`.
-- Decisiones tomadas en la Fase A:
-  - pandas 3.x.
-  - Llaves heredadas de Supabase (anon y service_role).
-  - `docs/PROMPT.md` fuera del repositorio.
-  - ruff no formatea los documentos.
-- **Fase B cerrada**:
-  - Migraciones: esquema, RLS con privilegios explícitos y vistas `security_invoker`.
-  - `seed.sql` con las empresas.
-  - Pipeline `run`: ingest → normalize → catalog_match → dedup → load. Es idempotente.
-  - `scripts/crear_usuarios_demo.py`: correos `@example.com`; la contraseña sale de `DEMO_PASSWORD`.
-- Decisiones de la Fase B:
-  - `cliente.clave_dedup`.
-  - `problema_calidad` guarda solo la última corrida.
-  - `lead.flags_calidad` guarda solo las banderas (tipos en `quality.BANDERAS`).
-  - `prioritario` en `asignacion` (TRD 10).
-  - Esta versión de Supabase no concede privilegios por defecto: se conceden en la migración de RLS.
-  - Herramientas: Supabase CLI 2.117 (scoop), uv 0.9.24, Docker 28.4, Python 3.12.
-  - El EDA reutiliza `pipeline/normalize.py`: una sola implementación de las reglas 6 y 6.1.
+- **Fase A cerrada**: repositorio con uv, Supabase CLI y hook de atribución; EDA determinista en
+  `docs/EDA.md`; PRD 1.2 y TRD 1.2 corregidos según el EDA.
+- Decisiones de la Fase A: tasa sin cuota contra el resto (8,3 %); sin contacto en 24 h con el
+  método medianoche; grupos duplicados contados tras quitar los `lead_id` repetidos;
+  `modelo_disponible_pv` informativo; `bogota` y `bogota d.c.` → Bogotá D.C.;
+  `capacidad_diaria_leads` → `capacidad_diaria`; pandas 3.x; llaves heredadas de Supabase;
+  `docs/PROMPT.md` fuera del repositorio; ruff no formatea los documentos.
+- **Fase B cerrada**: migraciones (esquema, RLS con privilegios explícitos, vistas
+  `security_invoker`), `seed.sql` con las empresas, pipeline `run` idempotente
+  (ingest → normalize → catalog_match → dedup → load) y `crear_usuarios_demo.py`.
+- Decisiones de la Fase B: `cliente.clave_dedup`; `problema_calidad` guarda solo la última corrida;
+  `lead.flags_calidad` solo banderas (`quality.BANDERAS`); `prioritario` en `asignacion`;
+  esta versión de Supabase no concede privilegios por defecto (se conceden en la migración de RLS);
+  el EDA reutiliza `pipeline/normalize.py`; herramientas: Supabase CLI 2.117, uv 0.9.24,
+  Docker 28.4, Python 3.12.
 - **Fase C cerrada**: extracción con dos implementaciones tras una misma interfaz: `rules` (regex,
   sin red) y `gemini` (lotes, salida estructurada, reintentos y respaldo por reglas). Corrida real:
   677 conversaciones en 68 peticiones y 8,4 min, sin errores ni respaldo; la segunda reusa la caché
@@ -146,3 +132,16 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
     regenerar el EDA tras el refactor dio un archivo idéntico.
   - 565 de los 981 elegibles no tienen conversación: su techo son 2 puntos y quedan en Frío. Es la
     limitación declarada en TRD 9.2, no un defecto.
+- **Fase E terminada, en punto de control E**:
+  - `senales_lead`: las señales consolidadas se persisten y la vista diaria las expone, así que la
+    app enseña lo mismo que se puntuó. La migración se aplicó con `supabase migration up --local`
+    para no perder la caché de extracción ni volver a gastar cuota.
+  - `app/streamlit_app.py`: lista del asesor con detalle (razones, señales, evidencia y chat),
+    tablero del gerente y pestaña «Cómo prioriza». README con la evidencia y los límites.
+  - `tests/test_aislamiento.py`: 11 pruebas con sesiones reales contra el Supabase local; 191 en total.
+- Decisiones de la Fase E:
+  - El aislamiento se prueba en la base, no en la interfaz: la app usa la llave anónima y el JWT,
+    así que un error de filtrado en la pantalla no expondría otra empresa.
+  - La consolidación no se reescribe en SQL: una sola implementación, la de `consolidar.py`.
+  - La contraseña de demostración no se teclea en pruebas de navegador; el aislamiento lo demuestra
+    `test_aislamiento.py`, que lee el secreto sin imprimirlo.

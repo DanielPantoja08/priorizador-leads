@@ -346,6 +346,25 @@ extraccion (
   unique (hash_contenido, extractor, prompt_version)   -- clave de caché
 )
 
+senales_lead (
+  lead_id            text primary key references lead,
+  empresa_id         text not null,
+  modelo_texto       text,                   -- el último modelo que nombró el cliente
+  sku_extraido       text references modelo,  -- ese texto resuelto contra el catálogo
+  cuota_inicial_cop  bigint,
+  menciona_cuota     text,
+  forma_pago         text,
+  intencion          text,
+  objecion           text,
+  pidio_cita         boolean,
+  pidio_cotizacion   boolean,
+  cliente_respondio  boolean,
+  conversaciones     int    not null default 0,
+  conversacion_ids   text[] not null default '{}',   -- para la evidencia y el chat completo
+  actualizado_en     timestamptz default now()
+)   -- señales de 8.4 ya consolidadas por lead: es lo que lee la app, para que muestre
+    -- exactamente lo mismo que alimentó el puntaje en vez de reconstruirlo en SQL
+
 score (
   lead_id           text references lead,
   fecha_corte       date,
