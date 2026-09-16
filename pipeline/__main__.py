@@ -54,9 +54,6 @@ def ejecutar(fecha_corte: date | None) -> int:
             )
             conteos.update(conteos_extraccion)
 
-            # Las señales consolidadas se persisten para que la app muestre lo mismo que se puntuó.
-            conteos["senales_lead"] = load.cargar_senales(conn, senales, leads, catalogo)
-
             # Puntaje y asignación (TRD 9 y 10). Las horas de urgencia se miden contra el último
             # registro del día de corte, no contra el reloj: así la corrida es reproducible.
             precios = dict(

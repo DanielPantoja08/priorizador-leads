@@ -109,8 +109,14 @@ def ejecutar(
 
     guardadas = load.cargar_extracciones(conn, filas)
     senales = consolidar(leads, conversaciones, por_conversacion)
+    # Las señales se persisten aquí, junto a su procedencia: esta etapa es la única que sabe qué
+    # extractor y qué versión de prompt las produjeron.
+    guardadas_senales = load.cargar_senales(
+        conn, senales, leads, catalogo, extractor.nombre, extractor.version
+    )
     conteos = {
         "extraccion": guardadas,
+        "senales_lead": guardadas_senales,
         "extraccion_calculadas": nuevas,
         "extraccion_reusadas": len(conversaciones) - nuevas,
         "extraccion_respaldo": len(getattr(extractor, "resueltas_por_respaldo", ())),

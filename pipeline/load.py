@@ -170,18 +170,28 @@ def cargar_extracciones(conn: psycopg.Connection, filas: list[dict]) -> int:
 
 
 def cargar_senales(
-    conn: psycopg.Connection, senales: dict, leads: pd.DataFrame, catalogo: Catalogo
+    conn: psycopg.Connection,
+    senales: dict,
+    leads: pd.DataFrame,
+    catalogo: Catalogo,
+    extractor: str,
+    prompt_version: str,
 ) -> int:
     """Guarda las señales ya consolidadas por lead (TRD 8.4).
 
     La app lee esta tabla, así que muestra exactamente lo que alimentó el puntaje. El modelo que
     el cliente nombró se resuelve aquí contra el catálogo para poder enseñar su nombre y su precio.
+
+    Se guarda también la procedencia: `extraccion` conserva todas las versiones cacheadas, así que
+    sin saber cuál se usó la app no puede enseñar la evidencia correcta.
     """
     empresas = dict(zip(leads["lead_id"], leads["empresa_id"], strict=True))
     filas = [
         {
             "lead_id": lead_id,
             "empresa_id": empresas[lead_id],
+            "extractor": extractor,
+            "prompt_version": prompt_version,
             "modelo_texto": s.modelo_texto,
             "sku_extraido": catalogo.resolver(s.modelo_texto).sku,
             "cuota_inicial_cop": s.cuota_inicial_cop,
