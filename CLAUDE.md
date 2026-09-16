@@ -138,10 +138,8 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
     enumerados en orden. El `v2` degradó `intencion` (40 -> 35/40) al añadir la lista de objeciones
     y `v3` la devolvió a 40/40.
   - **La medición tiene ruido: `temperature = 0` no hace determinista al modelo.** Dos corridas
-    idénticas sobre las mismas 40 conversaciones dieron 98,6 % y 99,2 %, con 4 campos de 360
-    distintos entre una y otra (siempre casos límite de `objecion` y `forma_pago`). Una sola
-    corrida de 40 casos **no distingue** versiones de prompt que difieran en menos de ~2 puntos:
-    para comparar hay que repetir la medición y promediar.
+    idénticas de las 40 dieron 98,6 % y 99,2 % (4 campos de 360 distintos). Comparar versiones de
+    prompt con una sola corrida no es concluyente; el detalle está en TRD 8.5.
   - El conjunto de referencia lo propuso la IA y lo revisó una persona; se declara así siempre.
     La columna de `reglas` parte con ventaja porque las etiquetas se propusieron con esos mismos
     criterios: la cifra que vale para juzgar la extracción con IA es la de `gemini`.
