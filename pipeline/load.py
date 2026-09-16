@@ -169,6 +169,44 @@ def cargar_extracciones(conn: psycopg.Connection, filas: list[dict]) -> int:
         )
 
 
+def cargar_senales(
+    conn: psycopg.Connection, senales: dict, leads: pd.DataFrame, catalogo: Catalogo
+) -> int:
+    """Guarda las señales ya consolidadas por lead (TRD 8.4).
+
+    La app lee esta tabla, así que muestra exactamente lo que alimentó el puntaje. El modelo que
+    el cliente nombró se resuelve aquí contra el catálogo para poder enseñar su nombre y su precio.
+    """
+    empresas = dict(zip(leads["lead_id"], leads["empresa_id"], strict=True))
+    filas = [
+        {
+            "lead_id": lead_id,
+            "empresa_id": empresas[lead_id],
+            "modelo_texto": s.modelo_texto,
+            "sku_extraido": catalogo.resolver(s.modelo_texto).sku,
+            "cuota_inicial_cop": s.cuota_inicial_cop,
+            "menciona_cuota": s.menciona_cuota,
+            "forma_pago": s.forma_pago,
+            "intencion": s.intencion,
+            "objecion": s.objecion,
+            "pidio_cita": s.pidio_cita,
+            "pidio_cotizacion": s.pidio_cotizacion,
+            "cliente_respondio": s.cliente_respondio,
+            "conversaciones": s.conversaciones,
+            "conversacion_ids": list(s.conversacion_ids),
+        }
+        for lead_id, s in sorted(senales.items())
+    ]
+    with conn.transaction(), conn.cursor() as cur:
+        n = db.upsert(cur, "senales_lead", filas, ["lead_id"])
+        # Si un lead deja de tener conversaciones, su fila no debe quedarse con datos viejos.
+        cur.execute(
+            "delete from public.senales_lead where lead_id not in (select unnest(%s::text[]))",
+            ([f["lead_id"] for f in filas],),
+        )
+    return n
+
+
 def cargar_score(conn: psycopg.Connection, puntajes: list, fecha_corte: date) -> int:
     """Guarda el puntaje de cada lead para esa fecha de corte y versión (TRD 9.2).
 
