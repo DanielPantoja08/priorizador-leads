@@ -105,6 +105,9 @@ def main() -> None:
         help="además de la línea base por reglas, evalúa con Gemini (consume cuota)",
     )
     comandos.add_parser("validate-scoring", help="valida el puntaje contra el histórico (TRD 9.3)")
+    comandos.add_parser(
+        "simulate-policy", help="mide cuántos cierres más captura priorizar (TRD 9.3)"
+    )
     args = parser.parse_args()
 
     if args.comando == "run":
@@ -116,6 +119,11 @@ def main() -> None:
         from evaluation.validate_scoring import main as validar_puntaje
 
         sys.exit(validar_puntaje())
+
+    if args.comando == "simulate-policy":
+        from evaluation.simular_politica import main as simular
+
+        sys.exit(simular())
 
     # eval: compara los extractores contra el conjunto de referencia revisado (TRD 8.5).
     from evaluation.eval_extraction import main as evaluar_extraccion
