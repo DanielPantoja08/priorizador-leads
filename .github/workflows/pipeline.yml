@@ -1,0 +1,54 @@
+# Corre el pipeline completo contra el Supabase remoto (TRD 11.3).
+# Es el mismo comando que en local: solo cambian las variables, que llegan de GitHub Secrets.
+name: pipeline-leads
+
+on:
+  schedule:
+    - cron: "0 11 * * *" # 06:00 America/Bogota (GitHub usa UTC)
+  workflow_dispatch:
+    inputs:
+      fecha_corte:
+        description: "YYYY-MM-DD (vacío = última fecha de registro)"
+        required: false
+      extractor:
+        description: "gemini | reglas"
+        type: choice
+        options: [gemini, reglas]
+        default: gemini
+
+# Dos corridas a la vez escribirían la misma lista: la segunda espera a que termine la primera.
+concurrency:
+  group: pipeline-leads
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    # La primera corrida con Gemini hace ~68 peticiones con pausa entre ellas; las siguientes usan la
+    # caché de la base y tardan segundos.
+    timeout-minutes: 45
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash-lite' }}
+      # En el cron no hay entradas: se cae a los valores por defecto.
+      EXTRACTOR: ${{ inputs.extractor || 'gemini' }}
+      FECHA_CORTE: ${{ inputs.fecha_corte }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+      - name: Instalar el entorno bloqueado por uv.lock
+        run: uv sync --frozen
+      - name: Revisar estilo
+        run: uv run ruff check .
+      # Sin credenciales de Supabase, la prueba de aislamiento se omite: el resto no usa red.
+      - name: Pruebas
+        run: uv run pytest -q
+      - name: Correr el pipeline
+        run: uv run python -m pipeline run
+      # Sale con código distinto de cero si el puntaje deja de cumplir el criterio (TRD 9.3).
+      - name: Validar el puntaje
+        run: uv run python -m pipeline validate-scoring
