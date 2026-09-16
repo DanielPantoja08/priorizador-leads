@@ -10,6 +10,7 @@ __pycache__/
 # Credenciales del proyecto remoto (despliegue).
 .env.remoto
 .streamlit/secrets.toml
+.streamlit/secrets.remoto.toml
 
 # Temporales de Supabase CLI
 supabase/.temp/
