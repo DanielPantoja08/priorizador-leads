@@ -104,14 +104,19 @@ def conversacion_de(sb: Client, ids: list[str]) -> pd.DataFrame:
     return pd.DataFrame(filas.data)
 
 
-def evidencia_de(sb: Client, ids: list[str]) -> list[dict]:
-    """Fragmentos que el extractor citó para justificar cada campo."""
-    if not ids:
+def evidencia_de(sb: Client, ids: list[str], prompt_version: str | None) -> list[dict]:
+    """Fragmentos que el extractor citó para justificar cada campo.
+
+    `extraccion` conserva todas las versiones cacheadas de cada conversación, así que hay que
+    filtrar por la que produjo estas señales; si no, se mezclan evidencias que se contradicen.
+    """
+    if not ids or not prompt_version:
         return []
     filas = (
         sb.table("extraccion")
         .select("conversacion_id, extractor, prompt_version, evidencia")
         .in_("conversacion_id", ids)
+        .eq("prompt_version", prompt_version)
         .execute()
     )
     return filas.data
@@ -150,10 +155,21 @@ def pesos(valor: object) -> str:
     return f"${int(valor):,.0f}".replace(",", ".")
 
 
-def tabla_de(df: pd.DataFrame, corte: date) -> pd.DataFrame:
-    """Columnas que ve el asesor en la lista (HU-01)."""
+def tabla_de(df: pd.DataFrame, corte: date, con_asesor: bool = False) -> pd.DataFrame:
+    """Columnas que ve el asesor en la lista (HU-01).
+
+    `orden` es la posición dentro de la lista de **cada asesor**, así que solo significa algo
+    cuando se está mirando a un asesor concreto. En la vista de toda la empresa se muestra a quién
+    le tocó cada lead: si no, la columna sería una fila de unos sin sentido.
+    """
+    primera = (
+        {"Asesor": df["asesor_id"].fillna("sin cupo")}
+        if con_asesor
+        # Int64 (entero anulable) y no int: los leads sin cupo no tienen orden.
+        else {"#": df["orden"].astype("Int64")}
+    )
     return pd.DataFrame({
-        "#": df["orden"],
+        **primera,
         "Temp.": [f"{ESTILO_TEMPERATURA.get(t, '')} {t}" for t in df["temperatura"]],
         "Prioridad": df["prioridad"],
         "Cliente": df["nombre"],
@@ -233,7 +249,7 @@ def detalle(sb: Client, lead: dict, corte: date) -> None:
                 quien = "🧑 Cliente" if m["emisor"] == "cliente" else "💬 Asesor"
                 st.markdown(f"**{quien}** · {m['hora']}  \n{m['texto']}")
         with st.expander("Evidencia citada por el extractor"):
-            for fila in evidencia_de(sb, ids):
+            for fila in evidencia_de(sb, ids, lead.get("ia_prompt_version")):
                 st.caption(
                     f"{fila['conversacion_id']} · {fila['extractor']} {fila['prompt_version']}"
                 )
@@ -263,15 +279,25 @@ def pantalla_leads(sb: Client, perfil: dict, corte: date) -> None:
         return
 
     asignados = df[df["estado"] == "asignado"]
+    # Mirando a toda la empresa, cada asesor trae su propio orden: lo que compara el gerente es
+    # la prioridad.
+    toda_la_empresa = asesor_id is None
+    if toda_la_empresa:
+        asignados = asignados.sort_values(["prioridad", "fecha_registro"], ascending=[False, True])
+
     st.markdown(f"**{len(asignados)} leads** para gestionar hoy.")
-    st.dataframe(tabla_de(asignados, corte), hide_index=True, width="stretch")
+    st.dataframe(
+        tabla_de(asignados, corte, con_asesor=toda_la_empresa), hide_index=True, width="stretch"
+    )
 
     st.markdown("### Detalle")
-    etiquetas = {
-        f"{r['orden']}. {r['nombre']} · {ESTILO_TEMPERATURA.get(r['temperatura'], '')} "
-        f"{r['temperatura']} (prioridad {r['prioridad']})": r["lead_id"]
-        for _, r in asignados.iterrows()
-    }
+    etiquetas = {}
+    for _, r in asignados.iterrows():
+        posicion = "" if toda_la_empresa or pd.isna(r["orden"]) else f"{int(r['orden'])}. "
+        etiquetas[
+            f"{posicion}{r['nombre']} · {ESTILO_TEMPERATURA.get(r['temperatura'], '')} "
+            f"{r['temperatura']} (prioridad {r['prioridad']})"
+        ] = r["lead_id"]
     if etiquetas:
         elegido = etiquetas[st.selectbox("Lead", list(etiquetas), label_visibility="collapsed")]
         detalle(sb, df[df["lead_id"] == elegido].iloc[0].to_dict(), corte)
@@ -307,6 +333,10 @@ def pantalla_tablero(sb: Client, corte: date) -> None:
             hide_index=True,
             width="stretch",
             column_config={
+                "asesor_id": "Asesor",
+                "nombre": "Nombre",
+                "asignados": "Asignados",
+                "prioritarios": "Prioritarios",
                 "capacidad_diaria": "Capacidad",
                 "uso": st.column_config.ProgressColumn("Uso", min_value=0, max_value=1),
             },
@@ -329,7 +359,9 @@ def pantalla_tablero(sb: Client, corte: date) -> None:
                 "menos de 24 horas. La asignación automática no los adelanta; usted decide."
             )
         st.dataframe(
-            tabla_de(ordenados, corte).assign(Prioritario=ordenados["prioritario"].values),
+            tabla_de(ordenados, corte, con_asesor=True).assign(
+                Prioritario=ordenados["prioritario"].values
+            ),
             hide_index=True,
             width="stretch",
         )
