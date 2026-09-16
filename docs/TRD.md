@@ -547,6 +547,8 @@ Para cada lead principal:
   - Una persona revisa y corrige cada registro, y el resultado se guarda como `gold_40.json` con `"revisado": true`.
   - La evaluación solo usa registros revisados. En la documentación se declara que las etiquetas fueron propuestas por IA y revisadas por una persona.
 - **Métricas:** exactitud por campo, y para la cuota, error absoluto con tolerancia del 5 %. Se calculan para `gemini` y para `reglas`.
+- **Ruido de la medición:** con `temperature = 0` el modelo **no** es determinista. Dos corridas idénticas sobre las mismas 40 conversaciones difirieron en 4 de 360 campos (98,6 % y 99,2 %), siempre en casos límite. Por eso una diferencia menor de ~2 puntos entre dos versiones del prompt no es concluyente: hay que repetir la medición antes de declarar una mejora.
+- **Sesgo del conjunto de referencia:** las etiquetas las propuso la IA con los mismos criterios que implementa `rules.py`, así que la columna `reglas` parte con ventaja. La cifra que informa sobre la calidad de la extracción con IA es la de `gemini`.
 - **Salida:** una tabla en Markdown que se copia al README y se muestra en la app.
 - **Uso:** los errores del LLM se analizan y alimentan la siguiente versión del prompt.
 

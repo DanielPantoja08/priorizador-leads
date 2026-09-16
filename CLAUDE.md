@@ -133,10 +133,18 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
     gratuito y estar pensado para procesamiento simple de datos en volumen. Comprobado con la llave
     del proyecto: `gemini-3.8-flash` responde 429 (sin cuota) y `gemini-2.5-flash` responde 404
     ("no longer available to new users"), así que **no sirven como valor por defecto**.
-  - Prompt `v2`: hablar de cuota inicial es crédito, y la objeción se elige por una lista de
-    prioridad explícita. Frente al borrador de referencia mejoró `objecion` (30 -> 35/40) y
-    `forma_pago` (35 -> 37/40), pero **empeoró `intencion` (40 -> 35/40)**: es una regresión
-    pendiente de corregir en `v3`, no un avance limpio.
+  - Prompt `v4` (vigente): hablar de cuota inicial es crédito, la objeción se elige por una lista de
+    prioridad con `precio` por encima de `comparando`, y los criterios de intención están
+    enumerados en orden. El `v2` degradó `intencion` (40 -> 35/40) al añadir la lista de objeciones
+    y `v3` la devolvió a 40/40.
+  - **La medición tiene ruido: `temperature = 0` no hace determinista al modelo.** Dos corridas
+    idénticas sobre las mismas 40 conversaciones dieron 98,6 % y 99,2 %, con 4 campos de 360
+    distintos entre una y otra (siempre casos límite de `objecion` y `forma_pago`). Una sola
+    corrida de 40 casos **no distingue** versiones de prompt que difieran en menos de ~2 puntos:
+    para comparar hay que repetir la medición y promediar.
+  - El conjunto de referencia lo propuso la IA y lo revisó una persona; se declara así siempre.
+    La columna de `reglas` parte con ventaja porque las etiquetas se propusieron con esos mismos
+    criterios: la cifra que vale para juzgar la extracción con IA es la de `gemini`.
   - Si una petición falla entera (cuota, modelo inexistente, respuesta ilegible) **no** se reintenta
     conversación por conversación: repetiría el mismo error multiplicando la espera por el tamaño
     del lote. Solo se piden por separado las conversaciones que el modelo omitió en una respuesta
