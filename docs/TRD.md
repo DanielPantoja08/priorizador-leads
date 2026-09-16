@@ -163,9 +163,11 @@ motos-leads/
 │   ├── dedup.py
 │   ├── extract/
 │   │   ├── schema.py
-│   │   ├── base.py               # interfaz Extractor
+│   │   ├── base.py               # interfaz Extractor, caché por hash de contenido
 │   │   ├── rules.py
 │   │   ├── gemini.py
+│   │   ├── consolidar.py         # señales por lead (8.4)
+│   │   ├── etapa.py              # orquesta la extracción dentro del pipeline
 │   │   └── prompts/extraccion_v1.md
 │   ├── scoring.py
 │   ├── assign.py
@@ -173,6 +175,8 @@ motos-leads/
 ├── scripts/
 │   └── crear_usuarios_demo.py    # único lugar donde se usa service_role
 ├── evaluation/
+│   ├── muestra_gold.py           # elige las 40 conversaciones de forma determinista
+│   ├── gold_40_muestra.json      # los textos elegidos, sin etiquetas
 │   ├── gold_40_borrador.json     # propuesta pendiente de revisión humana
 │   ├── gold_40.json              # etiquetas revisadas
 │   ├── eval_extraction.py
@@ -527,7 +531,7 @@ Tiene dos funciones:
 1. Respaldo operativo del extractor con LLM.
 2. Línea base de la evaluación.
 
-### 8.4 Consolidación por lead
+### 8.4 Consolidación por lead (`extract/consolidar.py`)
 
 Para cada lead principal:
 - Se toman las extracciones de todas las conversaciones de sus leads, con prioridad a la más reciente.
