@@ -149,12 +149,14 @@ uv run streamlit run app/streamlit_app.py
 `DATABASE_URL`, `SUPABASE_URL` y `SUPABASE_ANON_KEY` salen de `supabase status`.
 Para correr sin llave de Gemini: `EXTRACTOR=reglas` en `.env`, o `--extractor reglas`.
 
-Usuarios de demostración: `gerente.emp01@example.com`, `gerente.emp02@example.com`,
-`gerente.emp03@example.com` y `asesor.emp01@example.com`. La contraseña es la de `DEMO_PASSWORD`
-y se comparte fuera del repositorio.
+Usuarios de demostración: un gerente por empresa (`gerente.emp01@example.com`,
+`gerente.emp02@example.com`, `gerente.emp03@example.com`) y **uno por cada asesor activo**, con el
+correo derivado de su id: `AS-001` → `asesor.as001@example.com`. Así la lista diaria se puede
+mostrar con cualquier asesor y no solo con uno. La contraseña es la de `DEMO_PASSWORD` y se
+comparte fuera del repositorio.
 
 Antes de cada commit: `uv run ruff check .`, `uv run ruff format .` y `uv run pytest -q`
-(**191 pruebas**; ninguna llama a servicios externos, salvo la de aislamiento, que usa el Supabase
+(**248 pruebas**; ninguna llama a servicios externos, salvo la de aislamiento, que usa el Supabase
 local y se omite sola si no está en ejecución).
 
 ---
@@ -163,6 +165,7 @@ local y se omite sola si no está en ejecución).
 
 | Documento | Contenido |
 |---|---|
+| [docs/arquitectura.md](docs/arquitectura.md) | Diagramas: flujo, componente de IA y aislamiento |
 | [docs/PRD.md](docs/PRD.md) | Qué se construye y por qué |
 | [docs/TRD.md](docs/TRD.md) | Cómo: modelo de datos, reglas, prompts, puntaje y despliegue |
 | [docs/EDA.md](docs/EDA.md) | Evidencia de los datos, generada por script |
@@ -187,3 +190,51 @@ Ninguna cifra de esta documentación se escribió a mano: todas salen de un scri
   genera dos clientes independientes, por diseño.
 - El histórico se analiza sin los 179 registros "Sin gestión": nunca fueron contactados, así que su
   desenlace no habla de la calidad del lead.
+
+---
+
+## Supuestos asumidos
+
+Ninguno de estos supuestos venía dado: se tomaron para poder avanzar y cada uno cambiaría el
+resultado si fuera falso.
+
+1. **Los archivos de `data/raw/` son la única fuente y no se corrigen.** Las inconsistencias se
+   resuelven en la normalización y quedan registradas en `problema_calidad`; el archivo original
+   nunca se toca.
+2. **La fecha de corte es un parámetro, no el reloj.** La demostración corre con `2026-09-10`, el
+   último día con registros. Medir la urgencia contra la hora real haría que la misma corrida diera
+   resultados distintos y rompería la idempotencia.
+3. **Un lead deja de ser gestionable si está `Descartado` o si superó la ventana de 30 días.** Por
+   eso la lista diaria tiene 981 leads y no 1.500.
+4. **La capacidad diaria del asesor es un tope duro.** Lo que no cabe queda `sin_cupo` y el gerente
+   decide; el sistema no sobrecarga a nadie por su cuenta.
+5. **Dos empresas con el mismo teléfono son dos clientes distintos.** Comparten el CRM pero no los
+   clientes, así que deduplicar entre empresas filtraría datos de una a otra.
+6. **Una conversación sin lead asociado no tiene dueño** y no se muestra a nadie.
+7. **El histórico es comparable con los leads de hoy**: mismos canales, mismo negocio y misma
+   estacionalidad. Si el negocio cambia, los pesos del componente A hay que recalcularlos.
+8. **Las etiquetas del conjunto de referencia las propuso la IA y las revisó una persona.** Nunca se
+   presentan como etiquetado manual, y por eso la cifra de `reglas` parte con ventaja.
+9. **`estado_gestion` es confiable aunque falte la fecha de contacto.** Los 76 leads con estado
+   avanzado y sin fecha puntúan por su estado: el contacto ocurrió y lo que falta es el dato.
+
+---
+
+## Qué haría con más tiempo
+
+En orden de lo que más movería la aguja:
+
+1. **Cerrar el ciclo con el asesor.** Hoy el sistema ordena pero no aprende: no hay forma de saber
+   si el lead que puso primero sirvió. Un botón de «contactado / no sirvió / cerrado» convertiría
+   cada día de uso en datos de entrenamiento, y en unos meses el puntaje aditivo podría
+   reemplazarse por un modelo con un AUC que valga la pena.
+2. **Validar el componente B.** El ajuste por conversación pesa poco justamente porque nadie lo ha
+   medido. Con desenlaces propios se sabría si la intención declarada predice algo.
+3. **Reasignar desde el tablero.** El gerente ve los prioritarios sin cupo pero tiene que resolverlo
+   por fuera; darle el botón cierra el flujo sin salir de la herramienta.
+4. **Alertar cuando una corrida falla.** `ejecucion` ya guarda el estado y el error: falta que
+   alguien se entere sin abrir la app.
+5. **Podar la caché de extracción.** Se conservan las cuatro versiones de prompt de cada
+   conversación; conviene archivar las que ya no son vigentes.
+6. **Reconstruir la ciudad y el punto de venta faltantes** con el histórico del cliente, en vez de
+   dejarlos nulos.
