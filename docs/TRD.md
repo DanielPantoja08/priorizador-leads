@@ -349,6 +349,8 @@ extraccion (
 senales_lead (
   lead_id            text primary key references lead,
   empresa_id         text not null,
+  extractor          text,                   -- procedencia: qué extractor produjo estas señales
+  prompt_version     text,                   -- y con qué versión; la app filtra la evidencia por ella
   modelo_texto       text,                   -- el último modelo que nombró el cliente
   sku_extraido       text references modelo,  -- ese texto resuelto contra el catálogo
   cuota_inicial_cop  bigint,

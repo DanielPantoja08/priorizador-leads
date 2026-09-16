@@ -133,15 +133,18 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
   - 565 de los 981 elegibles no tienen conversación: su techo son 2 puntos y quedan en Frío. Es la
     limitación declarada en TRD 9.2, no un defecto.
 - **Fase E terminada, en punto de control E**:
-  - `senales_lead`: las señales consolidadas se persisten y la vista diaria las expone, así que la
-    app enseña lo mismo que se puntuó. La migración se aplicó con `supabase migration up --local`
-    para no perder la caché de extracción ni volver a gastar cuota.
-  - `app/streamlit_app.py`: lista del asesor con detalle (razones, señales, evidencia y chat),
-    tablero del gerente y pestaña «Cómo prioriza». README con la evidencia y los límites.
-  - `tests/test_aislamiento.py`: 11 pruebas con sesiones reales contra el Supabase local; 191 en total.
+  - `senales_lead` guarda las señales consolidadas y su procedencia (`extractor`, `prompt_version`);
+    la vista diaria las expone. Migraciones aplicadas con `supabase migration up --local` para no
+    perder la caché de extracción ni volver a gastar cuota.
+  - `app/streamlit_app.py`: lista del asesor con detalle, tablero del gerente y «Cómo prioriza».
+    README con la evidencia y los límites.
+  - `tests/test_aislamiento.py`: 11 pruebas con sesiones reales; 191 en total.
+  - Probada con Playwright (acceso, roles, datos y aislamiento). Encontró 4 defectos, ya corregidos:
+    evidencia de todas las versiones cacheadas a la vez, `orden` flotante (`1.0.`), columna `#` a
+    unos en la vista de empresa y cabeceras crudas en la carga por asesor.
 - Decisiones de la Fase E:
-  - El aislamiento se prueba en la base, no en la interfaz: la app usa la llave anónima y el JWT,
-    así que un error de filtrado en la pantalla no expondría otra empresa.
+  - El aislamiento se prueba en la base, no en la interfaz: la app usa la llave anónima y el JWT.
   - La consolidación no se reescribe en SQL: una sola implementación, la de `consolidar.py`.
-  - La contraseña de demostración no se teclea en pruebas de navegador; el aislamiento lo demuestra
-    `test_aislamiento.py`, que lee el secreto sin imprimirlo.
+  - `orden` es por asesor: en la vista de empresa se muestra el asesor y se ordena por prioridad.
+  - La contraseña de demostración no se teclea en el navegador; para probar la interfaz se crean
+    usuarios desechables y se borran al terminar.
