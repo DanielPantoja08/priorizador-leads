@@ -133,18 +133,18 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
   - 565 de los 981 elegibles no tienen conversación: su techo son 2 puntos y quedan en Frío. Es la
     limitación declarada en TRD 9.2, no un defecto.
 - **Fase E terminada, en punto de control E**:
-  - `senales_lead` guarda las señales consolidadas y su procedencia (`extractor`, `prompt_version`);
-    la vista diaria las expone. Migraciones aplicadas con `supabase migration up --local` para no
-    perder la caché de extracción ni volver a gastar cuota.
-  - `app/streamlit_app.py`: lista del asesor con detalle, tablero del gerente y «Cómo prioriza».
-    README con la evidencia y los límites.
-  - `tests/test_aislamiento.py`: 11 pruebas con sesiones reales; 191 en total.
-  - Probada con Playwright (acceso, roles, datos y aislamiento). Encontró 4 defectos, ya corregidos:
-    evidencia de todas las versiones cacheadas a la vez, `orden` flotante (`1.0.`), columna `#` a
-    unos en la vista de empresa y cabeceras crudas en la carga por asesor.
+  - `senales_lead` guarda las señales y su procedencia (`extractor`, `prompt_version`); la vista
+    diaria las expone. Migraciones con `supabase migration up --local` para no perder la caché.
+  - `app/streamlit_app.py`: lista del asesor, tablero del gerente y «Cómo prioriza». Probada con
+    Playwright: 4 defectos encontrados y corregidos (evidencia mezclada, `orden` flotante, columna
+    `#` a unos, cabeceras crudas).
 - Decisiones de la Fase E:
   - El aislamiento se prueba en la base, no en la interfaz: la app usa la llave anónima y el JWT.
   - La consolidación no se reescribe en SQL: una sola implementación, la de `consolidar.py`.
   - `orden` es por asesor: en la vista de empresa se muestra el asesor y se ordena por prioridad.
-  - La contraseña de demostración no se teclea en el navegador; para probar la interfaz se crean
-    usuarios desechables y se borran al terminar.
+  - La contraseña de demostración no se teclea en el navegador.
+- **Revisión contra el enunciado** (antes de la Fase F):
+  - `docs/arquitectura.md` (diagramas), README con supuestos y próximos pasos, `.env.example` con
+    `EXTRACTOR=gemini`, y pruebas de app, `db`, evaluación y etapa: **248 en total**.
+  - `crear_usuarios_demo.py`: un usuario por asesor activo (40) y 3 gerentes (AS-001 -> as001).
+  - Falta para entregar: URL pública, workflow programado y presentación.
