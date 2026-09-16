@@ -12,7 +12,7 @@ from datetime import date
 import pandas as pd
 import pytest
 
-from app.streamlit_app import horas_desde, pesos, tabla_de
+from app.streamlit_app import frase_de_apertura, horas_desde, pesos, tabla_de
 
 CORTE = date(2026, 9, 10)
 
@@ -28,9 +28,16 @@ def fila(**cambios) -> dict:
         "telefono": "3001234567",
         "canal": "WhatsApp",
         "modelo": "Boxer CT 100",
+        "modelo_texto_original": "boxer ct100",
+        "ia_conversaciones": 1,
         "ia_modelo": "Bajaj Boxer CT 100",
+        "ia_modelo_texto": "boxer",
         "ia_cuota_inicial_cop": 2_000_000,
         "ia_forma_pago": "credito",
+        "ia_objecion": "ninguna",
+        "ia_pidio_cita": True,
+        "ia_pidio_cotizacion": False,
+        "ia_cliente_respondio": True,
         "fecha_registro": "2026-09-10T08:00:00-05:00",
         "estado_gestion": "Sin gestión",
     }
@@ -131,3 +138,73 @@ def test_la_temperatura_lleva_texto_y_no_solo_color() -> None:
 
 def test_un_telefono_ausente_no_rompe_la_tabla() -> None:
     assert tabla_de(marco(fila(telefono=None)), CORTE)["Teléfono"][0] == "—"
+
+
+# --------------------------------------------------------------------------------------
+# frase_de_apertura
+# --------------------------------------------------------------------------------------
+
+
+def test_la_frase_reune_lo_que_el_asesor_necesita_para_marcar() -> None:
+    frase = frase_de_apertura(fila(), CORTE)
+    assert "Carlos" in frase
+    assert "Bajaj Boxer CT 100" in frase
+    assert "$2.000.000" in frase
+    assert "crédito" in frase
+    assert "Pidió cita" in frase
+    assert "16 h sin contacto" in frase
+
+
+def test_la_frase_es_la_misma_cada_vez() -> None:
+    # Es una plantilla, no una llamada al modelo: mismo lead, misma frase, sin consumir cuota.
+    assert frase_de_apertura(fila(), CORTE) == frase_de_apertura(fila(), CORTE)
+
+
+def test_solo_se_usa_el_primer_nombre() -> None:
+    assert frase_de_apertura(fila(nombre="Ana Lucía Restrepo"), CORTE).startswith("Ana ")
+
+
+def test_sin_conversacion_la_frase_lo_dice_y_pide_confirmar() -> None:
+    # Prometer datos que no existen sería peor que no decir nada.
+    frase = frase_de_apertura(fila(ia_conversaciones=0), CORTE)
+    assert "no tiene conversación" in frase
+    assert "Confirme modelo y forma de pago" in frase
+    assert "$2.000.000" not in frase
+
+
+def test_sin_conversacion_se_menciona_el_modelo_del_formulario() -> None:
+    assert "Boxer CT 100" in frase_de_apertura(fila(ia_conversaciones=0), CORTE)
+
+
+def test_una_objecion_se_advierte_antes_de_llamar() -> None:
+    frase = frase_de_apertura(fila(ia_objecion="reporte_centrales"), CORTE)
+    assert "Ojo" in frase and "reporte centrales" in frase
+
+
+def test_se_avisa_cuando_el_cliente_dejo_de_responder() -> None:
+    assert "No respondió al último mensaje" in frase_de_apertura(
+        fila(ia_cliente_respondio=False), CORTE
+    )
+
+
+def test_un_lead_ya_gestionado_no_habla_de_horas_sin_contacto() -> None:
+    # Las horas solo significan algo si nadie lo ha llamado todavía.
+    frase = frase_de_apertura(fila(estado_gestion="Contactado"), CORTE)
+    assert "sin contacto" not in frase
+
+
+def test_el_pago_de_contado_se_dice_asi() -> None:
+    assert "paga de contado" in frase_de_apertura(fila(ia_forma_pago="contado"), CORTE)
+
+
+def test_la_cotizacion_se_menciona_cuando_no_hubo_cita() -> None:
+    frase = frase_de_apertura(fila(ia_pidio_cita=False, ia_pidio_cotizacion=True), CORTE)
+    assert "Pidió cotización" in frase
+
+
+def test_una_conversacion_sin_datos_no_inventa_nada() -> None:
+    frase = frase_de_apertura(
+        fila(ia_modelo=None, ia_modelo_texto=None, ia_cuota_inicial_cop=None,
+             ia_forma_pago="no_informa", ia_pidio_cita=False), CORTE
+    )  # fmt: skip
+    assert "escribió sin dar detalles" in frase

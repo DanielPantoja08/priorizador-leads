@@ -155,6 +155,53 @@ def pesos(valor: object) -> str:
     return f"${int(valor):,.0f}".replace(",", ".")
 
 
+def frase_de_apertura(lead: dict, corte: date) -> str:
+    """Cómo abrir la llamada, en una frase armada con los datos que ya están.
+
+    Es una plantilla, no una llamada al modelo: los mismos datos dan siempre la misma frase, no
+    consume cuota y no puede inventar nada. Responde a la queja del enunciado —«el asesor arranca
+    de cero en cada llamada»— sin agregar un riesgo de alucinación donde no hacía falta.
+    """
+    nombre = (lead.get("nombre") or "El cliente").split()[0]
+    if not lead.get("ia_conversaciones"):
+        modelo = lead.get("modelo") or lead.get("modelo_texto_original")
+        pedido = (
+            f"Pidió información de {modelo} por {lead.get('canal', 'el formulario')}."
+            if modelo
+            else "No dejó modelo de interés."
+        )
+        return f"{nombre} no tiene conversación de WhatsApp. {pedido} Confirme modelo y forma de pago."  # fmt: skip
+
+    partes = []
+    modelo = lead.get("ia_modelo") or lead.get("ia_modelo_texto")
+    if modelo:
+        partes.append(f"preguntó por la {modelo}")
+    if lead.get("ia_cuota_inicial_cop"):
+        partes.append(f"tiene {pesos(lead['ia_cuota_inicial_cop'])} de inicial")
+    if lead.get("ia_forma_pago") == "credito":
+        partes.append("va por crédito")
+    elif lead.get("ia_forma_pago") == "contado":
+        partes.append("paga de contado")
+
+    frase = f"{nombre} " + (", ".join(partes) if partes else "escribió sin dar detalles")
+
+    if lead.get("ia_pidio_cita"):
+        frase += ". Pidió cita"
+    elif lead.get("ia_pidio_cotizacion"):
+        frase += ". Pidió cotización"
+
+    # Lo que conviene tener en la cabeza antes de marcar, no después.
+    if lead.get("ia_objecion") and lead["ia_objecion"] != "ninguna":
+        frase += f". Ojo: puso una objeción de {lead['ia_objecion'].replace('_', ' ')}"
+    if not lead.get("ia_cliente_respondio"):
+        frase += ". No respondió al último mensaje"
+
+    horas = horas_desde(lead.get("fecha_registro"), corte)
+    if horas is not None and lead.get("estado_gestion") == "Sin gestión":
+        frase += f". Lleva {horas:.0f} h sin contacto"
+    return frase + "."
+
+
 def tabla_de(df: pd.DataFrame, corte: date, con_asesor: bool = False) -> pd.DataFrame:
     """Columnas que ve el asesor en la lista (HU-01).
 
@@ -185,6 +232,7 @@ def tabla_de(df: pd.DataFrame, corte: date, con_asesor: bool = False) -> pd.Data
 
 def detalle(sb: Client, lead: dict, corte: date) -> None:
     """Todo lo que el asesor necesita para llamar sin leer el chat completo (HU-02)."""
+    st.info(f"☎️ **Cómo abrir la llamada** · {frase_de_apertura(lead, corte)}")
     izquierda, derecha = st.columns(2)
 
     with izquierda:
@@ -414,6 +462,14 @@ Validación con corte temporal (entrenamiento antes del 15 de junio de 2026, pru
 Un Caliente cierra **2,16 veces** más que un Frío (criterio de aceptación: 1,8). El AUC es 0,602:
 el puntaje **ordena**, no predice con certeza. Reproducible con
 `uv run python -m pipeline validate-scoring`.
+
+### Qué significa en ventas
+
+Con la capacidad de hoy —694 cupos para 981 leads elegibles— atender por puntaje en vez de por
+orden de llegada habría capturado **9 cierres más** sobre el histórico, un 6,2 %. La ganancia
+depende de cuán escaso sea el cupo: si alcanzara solo para la mitad de la demanda serían 20 cierres
+más (19,6 %); si alcanzara para todos, ninguna política ganaría, porque no sobraría nadie por
+atender. Reproducible con `uv run python -m pipeline simulate-policy`.
 
 ### Límites que conviene conocer
 
