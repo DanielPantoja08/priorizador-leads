@@ -96,19 +96,21 @@ OBJECIONES: tuple[tuple[Objecion, re.Pattern[str]], ...] = (
             re.I,
         ),
     ),
-    (
-        "comparando",
-        re.compile(
-            r"comparando|otra marca|me est[aá]n ofreciendo otra|mirando tambi[eé]n|cotizando en otra",
-            re.I,
-        ),
-    ),
+    # `precio` va antes que `comparando`: si al cliente no le alcanza la plata, esa es la barrera
+    # real, aunque además esté cotizando en otra parte.
     (
         "precio",
         re.compile(
             r"m[aá]s econ[oó]mic|muy caro|est[aá] caro|m[aá]s barat|no me alcanza"
             r"|sale del presupuesto|fuera de presupuesto|muy costosa?|inicial est[aá] muy alta"
             r"|por encima de lo que tengo",
+            re.I,
+        ),
+    ),
+    (
+        "comparando",
+        re.compile(
+            r"comparando|otra marca|me est[aá]n ofreciendo otra|mirando tambi[eé]n|cotizando en otra",
             re.I,
         ),
     ),

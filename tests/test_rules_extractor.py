@@ -148,6 +148,12 @@ def test_objeciones(texto: str, objecion: str) -> None:
     assert extraer(texto).objecion == objecion
 
 
+def test_el_precio_pesa_mas_que_estar_comparando() -> None:
+    # Si no le alcanza la plata, esa es la barrera real aunque también esté cotizando en otra parte.
+    e = extraer("Estoy es comparando por ahora", "Es que la inicial está muy alta")
+    assert e.objecion == "precio"
+
+
 def test_hablar_de_inicial_implica_credito() -> None:
     # El cliente nunca dice "financiada", pero hablar de inicial es estar financiando.
     e = extraer("Esa sí me sirve. Tengo 2 millones de inicial")
