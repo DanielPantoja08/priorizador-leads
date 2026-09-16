@@ -8,6 +8,9 @@ asesor sepa a quién llamar primero y qué decirle.
 Cada empresa ve únicamente sus datos, y ese aislamiento se aplica en la base de datos, no en la
 interfaz.
 
+**App en línea:** https://priorizador-leads.streamlit.app · **Pipeline diario:**
+[GitHub Actions](https://github.com/DanielPantoja08/priorizador-leads/actions/workflows/pipeline.yml)
+
 ---
 
 ## Qué hace, en una corrida
@@ -206,6 +209,33 @@ comparte fuera del repositorio.
 Antes de cada commit: `uv run ruff check .`, `uv run ruff format .` y `uv run pytest -q`
 (**279 pruebas**; ninguna llama a servicios externos, salvo la de aislamiento, que usa el Supabase
 local y se omite sola si no está en ejecución).
+
+### Despliegue
+
+El código es el mismo que en local; solo cambian las variables (TRD 11.3).
+
+| Pieza | Dónde | Cómo |
+|---|---|---|
+| Base | Supabase remoto, São Paulo | `supabase link` y `supabase db push --include-seed` |
+| Pipeline | [GitHub Actions](.github/workflows/pipeline.yml) | Todos los días a las 06:00 de Bogotá y a mano (`workflow_dispatch`, con fecha y extractor) |
+| App | Streamlit Community Cloud | `app/streamlit_app.py`, Python 3.12, dependencias de `app/requirements.txt` |
+
+El workflow instala con `uv sync --frozen`, pasa `ruff` y `pytest`, corre el pipeline y termina con
+`validate-scoring`, que falla si el puntaje deja de cumplir el criterio. Secretos: `DATABASE_URL`
+(por el *session pooler*, puerto 5432: el *transaction pooler* no admite las sentencias preparadas
+de psycopg) y `GEMINI_API_KEY`. La app solo recibe `SUPABASE_URL` y `SUPABASE_ANON_KEY`.
+
+`app/requirements.txt` no se edita a mano: se regenera con
+`uv export --only-group app --no-hashes --frozen --no-emit-project -o app/requirements.txt`.
+Streamlit Cloud busca primero junto al punto de entrada, así que instala solo lo que la app usa.
+
+Primera corrida remota (disparo manual, extractor `gemini`): 677 conversaciones en 68 peticiones,
+sin errores ni respaldo, en 13,6 min; 981 leads puntuados, 637 asignados y 344 sin cupo, igual que en
+local. La temperatura quedó en 142 Caliente, 60 Tibio y 779 Frío: un lead pasó de Frío a Tibio
+respecto de la corrida local, porque `temperature = 0` no hace determinista al modelo (TRD 8.5).
+En la URL pública, un asesor de EMP-01 ve sus 12 leads y un gerente de EMP-02 ve los 201 asignados
+de su empresa; por la API, ese gerente recibe 0 leads al pedir los de EMP-01, y sin sesión la base
+responde `permission denied`.
 
 ---
 
