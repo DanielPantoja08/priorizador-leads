@@ -1,0 +1,1286 @@
+[
+  {
+    "conversacion_id": "CONV-00001",
+    "lead_id": "LD-01125",
+    "estrato": "sin_respuesta",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Buenas, quiero información de la Suzuki Gixxer 150"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Buenas! Con mucho gusto le colaboro. La Suzuki Gixxer 150 está en $11.990.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¿Sigue interesado? quedo atento"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00005",
+    "lead_id": "LD-00631",
+    "estrato": "sin_respuesta",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Buenas tardes, quiero información de la Hero Hunk 160R"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Buenas tardes! Con mucho gusto le colaboro. La Hero Hunk 160R está en $10.490.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¿Sigue interesado? quedo atento"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00009",
+    "lead_id": "LD-01021",
+    "estrato": "cambio_de_modelo",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Qsé, estoy averiguando por la Suzuki GN 125"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Qué más pues! Con mucho gusto le colaboro. La Suzuki GN 125 está en $7.490.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "¿Y no tienen algo más económico? tipo la Hero Dash 110"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Claro. la Hero Dash 110 está en $6.290.000 más papeles"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Esa sí me sirve. Tengo 2000mil de inicial"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "¿Mañana los visito?"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00016",
+    "lead_id": "LD-01019",
+    "estrato": "cambio_de_modelo",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Buen día, me interesa la Bajaj Boxer CT 100"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Buenos días! Con mucho gusto le colaboro. La Bajaj Boxer CT 100 está en $5.790.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "¿Y no tienen algo más económico? tipo la Honda CB 125F Twister"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Claro. la Honda CB 125F Twister está en $7.990.000 más papeles"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Esa sí me sirve. Tengo 1 palos de inicial"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "¿Mañana los visito?"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00007",
+    "lead_id": "LD-01406",
+    "estrato": "jerga_palos",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Buenas, vi el anuncio de la Bajaj Pulsar NS 125"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Buenos días! Con mucho gusto le colaboro. La Bajaj Pulsar NS 125 está en $8.990.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Financiada, tengo 1 palos para la inicial"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Perfecto. ¿Usted tiene cómo demostrar ingresos? Le puedo dejar el estudio de crédito adelantado"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Claro, tengo contrato indefinido"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "¿Puedo pasar mañana a la sede a verla?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Claro que sí, lo esperamos. Estamos de 8 a 6, ¿le separo la moto mientras tanto?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Sí por favor, voy saliendo"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00014",
+    "lead_id": "LD-00993",
+    "estrato": "jerga_palos",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Qué más pues, estoy averiguando por la Honda CB 190R"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Hola buenas! Con mucho gusto le colaboro. La Honda CB 190R está en $13.990.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Financiada. Tengo como 0 palos, ¿alcanza para la inicial?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Con esa inicial la cuota le queda alrededor de $550.000 a 48 meses."
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Estaba viendo una usada más barata"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Le entiendo. ¿Le mando la cotización formal al WhatsApp para que la revise con calma?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Bueno, mándela y yo le digo"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00057",
+    "lead_id": "LD-00193",
+    "estrato": "jerga_millonzitos",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Buenas, vi el anuncio de la Hero Eco Deluxe 100"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Hola! Con mucho gusto le colaboro. La Hero Eco Deluxe 100 está en $4.990.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Financiada. Tengo como como 0 millonzitos, ¿alcanza para la inicial?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Con esa inicial la cuota le queda alrededor de $410.000 a 48 meses."
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Es que la inicial está muy alta"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Le entiendo. ¿Le mando la cotización formal al WhatsApp para que la revise con calma?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Listo, envíemela"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00058",
+    "lead_id": "LD-00956",
+    "estrato": "jerga_millonzitos",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Qué más pues, me interesa la Honda CB 125F Twister"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Qué más pues! Con mucho gusto le colaboro. La Honda CB 125F Twister está en $7.990.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "¿Y no tienen algo más económico? tipo la AKT NKD 125"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Claro. la AKT NKD 125 está en $5.290.000 más papeles"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Esa sí me sirve. Tengo como 1 millonzitos de inicial"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "¿Mañana los visito?"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00017",
+    "lead_id": "LD-00027",
+    "estrato": "monto_pegado_mil",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Qsé, quiero información de la Suzuki Best 125"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Qsé! Con mucho gusto le colaboro. La Suzuki Best 125 está en $6.590.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Financiada, tengo 3000mil para la inicial"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Perfecto. ¿Usted tiene cómo demostrar ingresos? Le puedo dejar el estudio de crédito adelantado"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Claro, tengo contrato indefinido"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "¿Puedo pasar mañana a la sede a verla?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Claro que sí, lo esperamos. Estamos de 8 a 6, ¿le separo la moto mientras tanto?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Listo, sepáremela"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00028",
+    "lead_id": "LD-01341",
+    "estrato": "monto_pegado_mil",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Buenas tardes, estoy averiguando por la Hero Eco Deluxe 100"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Buen día! Con mucho gusto le colaboro. La Hero Eco Deluxe 100 está en $4.990.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "De contado, ya tengo la plata lista, 4900mil"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Perfecto. ¿Usted tiene cómo demostrar ingresos? Le puedo dejar el estudio de crédito adelantado"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Sí, soy independiente pero tengo extractos"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Voy esta tarde para allá, ¿hasta qué hora abren?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Claro que sí, lo esperamos. Estamos de 8 a 6, ¿le separo la moto mientras tanto?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Sí por favor, voy saliendo"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00003",
+    "lead_id": "LD-01166",
+    "estrato": "monto_en_pesos",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Buenas, vi el anuncio de la Hero Eco Deluxe 100"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Hola! Con mucho gusto le colaboro. La Hero Eco Deluxe 100 está en $4.990.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Financiada, tengo $1.500.000 para la inicial"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Perfecto. ¿Usted tiene cómo demostrar ingresos? Le puedo dejar el estudio de crédito adelantado"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Sí señor, trabajo en empresa con contrato fijo"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "¿A qué hora los puedo visitar hoy?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Claro que sí, lo esperamos. Estamos de 8 a 6, ¿le separo la moto mientras tanto?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Hágale pues, ya voy en camino"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00052",
+    "lead_id": "LD-01134",
+    "estrato": "monto_en_pesos",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Qsé, me interesa la Honda Navi"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Hola buenas! Con mucho gusto le colaboro. La Honda Navi está en $7.290.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "¿Y no tienen algo más económico? tipo la Suzuki V-Strom 250"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Claro. la Suzuki V-Strom 250 está en $21.900.000 más papeles"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Esa sí me sirve. Tengo $1.500.000 de inicial"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "¿Mañana los visito?"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00004",
+    "lead_id": "LD-00655",
+    "estrato": "cero_inicial",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Buenas, me interesa la Bajaj Dominar 400"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Buen día! Con mucho gusto le colaboro. La Bajaj Dominar 400 está en $24.900.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Financiada. Tengo como 0 millones, ¿alcanza para la inicial?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Con esa inicial la cuota le queda alrededor de $550.000 a 48 meses."
+      },
+      {
+        "emisor": "cliente",
+        "texto": "No tengo con qué dar la inicial ahora"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Le entiendo. ¿Le mando la cotización formal al WhatsApp para que la revise con calma?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Listo, envíemela"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00010",
+    "lead_id": "LD-01450",
+    "estrato": "cero_inicial",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Hola, quiero información de la Bajaj Pulsar RS 200"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Qsé! Con mucho gusto le colaboro. La Bajaj Pulsar RS 200 está en $15.490.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Financiada, pero primero quiero saber cuánto queda la cuota"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Con esa inicial la cuota le queda alrededor de $550.000 a 48 meses."
+      },
+      {
+        "emisor": "cliente",
+        "texto": "No tengo con qué dar la inicial ahora"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Le entiendo. ¿Le mando la cotización formal al WhatsApp para que la revise con calma?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Listo, envíemela"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00011",
+    "lead_id": "LD-01389",
+    "estrato": "objecion_centrales",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Qué más pues, vi el anuncio de la Suzuki Best 125"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Buenos días! Con mucho gusto le colaboro. La Suzuki Best 125 está en $6.590.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Financiada, pero primero quiero saber cuánto queda la cuota"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Con esa inicial la cuota le queda alrededor de $410.000 a 48 meses."
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Tengo un reporte viejo en centrales, ¿eso afecta?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Le entiendo. ¿Le mando la cotización formal al WhatsApp para que la revise con calma?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Listo, envíemela"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00025",
+    "lead_id": "LD-00958",
+    "estrato": "objecion_centrales",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Qsé, estoy averiguando por la Suzuki GN 125"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Buenas! Con mucho gusto le colaboro. La Suzuki GN 125 está en $7.490.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Era por curiosidad nomás"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Estoy en centrales"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Sin problema, cualquier cosa quedo atento por acá"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Ok gracias"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00002",
+    "lead_id": "LD-01097",
+    "estrato": "objecion_tasa",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Buen día, vi el anuncio de la AKT TTR 200"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Qué más pues! Con mucho gusto le colaboro. La AKT TTR 200 está en $9.890.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Financiada, pero primero quiero saber cuánto queda la cuota"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Con esa inicial la cuota le queda alrededor de $320.000 a 48 meses."
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Estaba viendo una usada más barata"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Le entiendo. ¿Le mando la cotización formal al WhatsApp para que la revise con calma?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Listo, envíemela"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00006",
+    "lead_id": "LD-00334",
+    "estrato": "objecion_tasa",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Buenas tardes, vi el anuncio de la AKT TTR 200"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Buen día! Con mucho gusto le colaboro. La AKT TTR 200 está en $9.890.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "A crédito, ¿cómo es el proceso?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Con esa inicial la cuota le queda alrededor de $550.000 a 48 meses."
+      },
+      {
+        "emisor": "cliente",
+        "texto": "¿Y cuánto queda la cuota mensual? porque el interés está caro"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Le entiendo. ¿Le mando la cotización formal al WhatsApp para que la revise con calma?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Bueno, mándela y yo le digo"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00012",
+    "lead_id": "LD-01325",
+    "estrato": "objecion_usada",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Qsé, quiero información de la Hero Hunk 160R"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Hola buenas! Con mucho gusto le colaboro. La Hero Hunk 160R está en $10.490.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Financiada. Tengo como 0 millones, ¿alcanza para la inicial?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Con esa inicial la cuota le queda alrededor de $480.000 a 48 meses."
+      },
+      {
+        "emisor": "cliente",
+        "texto": "¿No tienen usadas?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Le entiendo. ¿Le mando la cotización formal al WhatsApp para que la revise con calma?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Bueno, mándela y yo le digo"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00015",
+    "lead_id": "LD-01308",
+    "estrato": "objecion_usada",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Hola, me interesa la Bajaj Dominar 400"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Hola! Con mucho gusto le colaboro. La Bajaj Dominar 400 está en $24.900.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Solo estaba mirando precios"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Estaba viendo una usada más barata"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Sin problema, cualquier cosa quedo atento por acá"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Ok gracias"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00069",
+    "lead_id": "LD-00502",
+    "estrato": "objecion_entrega",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Qsé, vi el anuncio de la Hero Xpulse 200"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Hola! Con mucho gusto le colaboro. La Hero Xpulse 200 está en $14.990.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Financiada. Tengo como 1200mil, ¿alcanza para la inicial?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Con esa inicial la cuota le queda alrededor de $410.000 a 48 meses."
+      },
+      {
+        "emisor": "cliente",
+        "texto": "¿Y cuánto se demora la entrega? necesito la moto ya"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Le entiendo. ¿Le mando la cotización formal al WhatsApp para que la revise con calma?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Bueno, mándela y yo le digo"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00106",
+    "lead_id": "LD-01212",
+    "estrato": "objecion_entrega",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Qsé, me interesa la AKT TTR 200"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Buenos días! Con mucho gusto le colaboro. La AKT TTR 200 está en $9.890.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "A crédito, ¿cómo es el proceso?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Con esa inicial la cuota le queda alrededor de $550.000 a 48 meses."
+      },
+      {
+        "emisor": "cliente",
+        "texto": "¿Y cuánto se demora la entrega? necesito la moto ya"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Le entiendo. ¿Le mando la cotización formal al WhatsApp para que la revise con calma?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Listo, envíemela"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00029",
+    "lead_id": "LD-01084",
+    "estrato": "objecion_familia",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Qué más pues, estoy averiguando por la Honda CB 125F Twister"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Buenas tardes! Con mucho gusto le colaboro. La Honda CB 125F Twister está en $7.990.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Era por curiosidad nomás"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Voy a consultar en la casa y le digo"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Sin problema, cualquier cosa quedo atento por acá"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Ok gracias"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00042",
+    "lead_id": "LD-00640",
+    "estrato": "objecion_familia",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Buenos días, estoy averiguando por la Hero Xpulse 200"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Hola buenas! Con mucho gusto le colaboro. La Hero Xpulse 200 está en $14.990.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Estoy es comparando por ahora"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Voy a consultar en la casa y le digo"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Sin problema, cualquier cosa quedo atento por acá"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Gracias, quedo pendiente"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00019",
+    "lead_id": "LD-01113",
+    "estrato": "objecion_comparando",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Buen día, quiero información de la Honda CB 190R"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Hola buenas! Con mucho gusto le colaboro. La Honda CB 190R está en $13.990.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Estoy es comparando por ahora"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "¿No tienen usadas?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Sin problema, cualquier cosa quedo atento por acá"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Dale pues"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00021",
+    "lead_id": "LD-01241",
+    "estrato": "objecion_comparando",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Buenas tardes, estoy averiguando por la Suzuki Best 125"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Qsé! Con mucho gusto le colaboro. La Suzuki Best 125 está en $6.590.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Estoy es comparando por ahora"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Es que la inicial está muy alta"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Sin problema, cualquier cosa quedo atento por acá"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Ok gracias"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00013",
+    "lead_id": "LD-00279",
+    "estrato": "objecion_precio",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Hola, me interesa la AKT Dynamic R3 125"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Buen día! Con mucho gusto le colaboro. La AKT Dynamic R3 125 está en $5.590.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Era por curiosidad nomás"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Es que la inicial está muy alta"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Sin problema, cualquier cosa quedo atento por acá"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Bueno muchas gracias"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00024",
+    "lead_id": "LD-00674",
+    "estrato": "objecion_precio",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Buenas, quiero información de la Hero Dash 110"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Hola buenas! Con mucho gusto le colaboro. La Hero Dash 110 está en $6.290.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "¿Y no tienen algo más económico? tipo la Bajaj Dominar 400"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Claro. la Bajaj Dominar 400 está en $24.900.000 más papeles"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Esa sí me sirve. Tengo 1 palos de inicial"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "¿Mañana los visito?"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00008",
+    "lead_id": "LD-00884",
+    "estrato": "solo_averiguando",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Hola buenas, estoy averiguando por la Bajaj Pulsar NS 125"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Buen día! Con mucho gusto le colaboro. La Bajaj Pulsar NS 125 está en $8.990.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Solo estaba mirando precios"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Es que la necesito esta semana"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Sin problema, cualquier cosa quedo atento por acá"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Listo gracias"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00020",
+    "lead_id": "LD-00584",
+    "estrato": "solo_averiguando",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Buenos días, vi el anuncio de la Bajaj Pulsar NS 125"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Buen día! Con mucho gusto le colaboro. La Bajaj Pulsar NS 125 está en $8.990.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Era por curiosidad nomás"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "No tengo inicial"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Sin problema, cualquier cosa quedo atento por acá"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Gracias, quedo pendiente"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00026",
+    "lead_id": "LD-00040",
+    "estrato": "pidio_cita",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Buenas, estoy averiguando por la Suzuki Gixxer 150"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Buenos días! Con mucho gusto le colaboro. La Suzuki Gixxer 150 está en $11.990.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "¿Y no tienen algo más económico? tipo la Hero Dash 110"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Claro. la Hero Dash 110 está en $6.290.000 más papeles"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Esa sí me sirve. Tengo 2,0 millones de inicial"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "¿Mañana los visito?"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00027",
+    "lead_id": "LD-00534",
+    "estrato": "pidio_cita",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Buen día, estoy averiguando por la Honda CB 190R"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Qué más pues! Con mucho gusto le colaboro. La Honda CB 190R está en $13.990.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "¿Y no tienen algo más económico? tipo la Honda XR 150L"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Claro. la Honda XR 150L está en $11.490.000 más papeles"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Esa sí me sirve. Tengo 2 millones de inicial"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "¿Mañana los visito?"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00083",
+    "lead_id": "LD-00079",
+    "estrato": "contado",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Buenos días, estoy averiguando por la Bajaj Dominar 400"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Buenos días! Con mucho gusto le colaboro. La Bajaj Dominar 400 está en $24.900.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "De contado, ya tengo la plata lista, 24,9 millones"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Perfecto. ¿Usted tiene cómo demostrar ingresos? Le puedo dejar el estudio de crédito adelantado"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Sí, soy independiente pero tengo extractos"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "¿A qué hora los puedo visitar hoy?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Claro que sí, lo esperamos. Estamos de 8 a 6, ¿le separo la moto mientras tanto?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Sí por favor, voy saliendo"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00085",
+    "lead_id": "LD-01006",
+    "estrato": "contado",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Hola, me interesa la Hero Hunk 160R"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Qué más pues! Con mucho gusto le colaboro. La Hero Hunk 160R está en $10.490.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "De contado, ya tengo la plata lista, $10.490.000"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Perfecto. ¿Usted tiene cómo demostrar ingresos? Le puedo dejar el estudio de crédito adelantado"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Sí, soy independiente pero tengo extractos"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Voy esta tarde para allá, ¿hasta qué hora abren?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Claro que sí, lo esperamos. Estamos de 8 a 6, ¿le separo la moto mientras tanto?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Listo, sepáremela"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00018",
+    "lead_id": "LD-00273",
+    "estrato": "corriente",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Qué más pues, vi el anuncio de la Bajaj Dominar 400"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Hola! Con mucho gusto le colaboro. La Bajaj Dominar 400 está en $24.900.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "A crédito, ¿cómo es el proceso?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Con esa inicial la cuota le queda alrededor de $480.000 a 48 meses."
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Esa tasa está muy alta"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Le entiendo. ¿Le mando la cotización formal al WhatsApp para que la revise con calma?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Listo, envíemela"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00022",
+    "lead_id": "LD-00570",
+    "estrato": "corriente",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Buenas tardes, me interesa la AKT TTR 200"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Buen día! Con mucho gusto le colaboro. La AKT TTR 200 está en $9.890.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Financiada. Tengo como 0 palos, ¿alcanza para la inicial?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Con esa inicial la cuota le queda alrededor de $410.000 a 48 meses."
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Está por encima de lo que tengo"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Le entiendo. ¿Le mando la cotización formal al WhatsApp para que la revise con calma?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Listo, envíemela"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00023",
+    "lead_id": "LD-01043",
+    "estrato": "corriente",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Buenas tardes, estoy averiguando por la Bajaj Pulsar RS 200"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Hola buenas! Con mucho gusto le colaboro. La Bajaj Pulsar RS 200 está en $15.490.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¿Sigue interesado? quedo atento"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00030",
+    "lead_id": "LD-00122",
+    "estrato": "corriente",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Buen día, vi el anuncio de la AKT TTR 200"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Buenos días! Con mucho gusto le colaboro. La AKT TTR 200 está en $9.890.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¿Sigue interesado? quedo atento"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00031",
+    "lead_id": "LD-01380",
+    "estrato": "corriente",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Hola buenas, me interesa la Bajaj Pulsar NS 160"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Buenas tardes! Con mucho gusto le colaboro. La Bajaj Pulsar NS 160 está en $11.290.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Financiada, tengo 2 millones para la inicial"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Perfecto. ¿Usted tiene cómo demostrar ingresos? Le puedo dejar el estudio de crédito adelantado"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Sí, soy independiente pero tengo extractos"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Voy esta tarde para allá, ¿hasta qué hora abren?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "Claro que sí, lo esperamos. Estamos de 8 a 6, ¿le separo la moto mientras tanto?"
+      },
+      {
+        "emisor": "cliente",
+        "texto": "Listo, sepáremela"
+      }
+    ]
+  },
+  {
+    "conversacion_id": "CONV-00032",
+    "lead_id": "LD-01136",
+    "estrato": "corriente",
+    "mensajes": [
+      {
+        "emisor": "cliente",
+        "texto": "Qué más pues, vi el anuncio de la AKT TTR 200"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¡Buen día! Con mucho gusto le colaboro. La AKT TTR 200 está en $9.890.000 más matrícula y SOAT. ¿La está buscando de contado o financiada?"
+      },
+      {
+        "emisor": "asesor",
+        "texto": "¿Sigue interesado? quedo atento"
+      }
+    ]
+  }
+]
