@@ -128,3 +128,11 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
   - `extraccion` guarda la salida cruda del extractor y la validación corre en cada ejecución, para
     que los problemas de calidad no dependan de la caché.
   - La caché de extracción va por `(hash_contenido, extractor, prompt_version)`.
+  - Modelo: **`gemini-3.5-flash-lite`** (`GEMINI_MODEL` en `.env`), elegido por estar en el nivel
+    gratuito y estar pensado para procesamiento simple de datos en volumen. Comprobado con la llave
+    del proyecto: `gemini-3.8-flash` responde 429 (sin cuota) y `gemini-2.5-flash` responde 404
+    ("no longer available to new users"), así que **no sirven como valor por defecto**.
+  - Si una petición falla entera (cuota, modelo inexistente, respuesta ilegible) **no** se reintenta
+    conversación por conversación: repetiría el mismo error multiplicando la espera por el tamaño
+    del lote. Solo se piden por separado las conversaciones que el modelo omitió en una respuesta
+    que sí llegó.

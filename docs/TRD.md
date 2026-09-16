@@ -516,7 +516,7 @@ class Extraccion(BaseModel):
 - **Salida estructurada:** `response_mime_type="application/json"` y `response_schema` con una lista de `Extraccion`. Temperatura 0.
 - **Lotes:** `LLM_BATCH_SIZE` conversaciones por petición, cada una delimitada con su `conversacion_id`. Se valida que la respuesta traiga exactamente los mismos IDs; los faltantes se reintentan de forma individual.
 - **Límite propio:** `LLM_MAX_RPM` con una pausa entre peticiones.
-- **Reintentos:** `tenacity` con espera exponencial, máximo 5 intentos, ante errores 429 y 5xx.
+- **Reintentos:** `tenacity` con espera exponencial, máximo 5 intentos, ante errores 429 y 5xx. Si la petición falla por completo tras esos intentos, las conversaciones del lote **no** se piden una por una: repetirían el mismo error multiplicando la espera por el tamaño del lote. El reintento individual se reserva para las conversaciones que el modelo omitió en una respuesta que sí llegó.
 - **Caché:** antes de llamar al LLM se consulta `extraccion` por `(hash_contenido, 'gemini', prompt_version)`. Solo se envían las conversaciones sin resultado. Cambiar el prompt obliga a subir `prompt_version`, lo que invalida la caché de forma controlada.
 - **Respaldo:** si una conversación agota los reintentos o su respuesta no valida, se procesa con el extractor por reglas y se guarda con `extractor='reglas'`. La ejecución queda con estado `ok_con_respaldo`.
 
