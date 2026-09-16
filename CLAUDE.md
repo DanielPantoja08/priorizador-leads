@@ -116,8 +116,9 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
   - El EDA reutiliza `pipeline/normalize.py`: una sola implementación de las reglas 6 y 6.1.
 - **Fase C terminada, en punto de control C**:
   - Extracción con dos implementaciones tras una misma interfaz: `rules` (regex, sin red) y
-    `gemini` (lotes, salida estructurada, reintentos y respaldo por reglas). **Gemini solo se ha
-    probado con simulaciones: falta `GEMINI_API_KEY` para ejercitarlo contra el servicio real.**
+    `gemini` (lotes, salida estructurada, reintentos y respaldo por reglas).
+  - Corrida real con Gemini: 677 conversaciones en 68 peticiones, 8,6 min, sin errores ni respaldo.
+    La segunda corrida reusa la caché: 0 peticiones y 3 s.
   - `pipeline run` incluye la etapa de extracción; `pipeline eval` se niega a evaluar mientras el
     conjunto de referencia no esté revisado por una persona.
 - Decisiones de la Fase C:
@@ -132,6 +133,10 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
     gratuito y estar pensado para procesamiento simple de datos en volumen. Comprobado con la llave
     del proyecto: `gemini-3.8-flash` responde 429 (sin cuota) y `gemini-2.5-flash` responde 404
     ("no longer available to new users"), así que **no sirven como valor por defecto**.
+  - Prompt `v2`: hablar de cuota inicial es crédito, y la objeción se elige por una lista de
+    prioridad explícita. Frente al borrador de referencia mejoró `objecion` (30 -> 35/40) y
+    `forma_pago` (35 -> 37/40), pero **empeoró `intencion` (40 -> 35/40)**: es una regresión
+    pendiente de corregir en `v3`, no un avance limpio.
   - Si una petición falla entera (cuota, modelo inexistente, respuesta ilegible) **no** se reintenta
     conversación por conversación: repetiría el mismo error multiplicando la espera por el tamaño
     del lote. Solo se piden por separado las conversaciones que el modelo omitió en una respuesta
