@@ -7,7 +7,7 @@ porque es la base la que lo garantiza.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 
 import pandas as pd
 import pytest
@@ -76,6 +76,12 @@ def test_un_lead_de_ayer_acumula_un_dia_mas() -> None:
 
 def test_sin_fecha_no_hay_horas() -> None:
     assert horas_desde(None, CORTE) is None
+
+
+def test_da_igual_si_la_fecha_llega_como_texto_o_ya_convertida() -> None:
+    # PostgREST la entrega como texto ISO; un cliente de Postgres, ya como datetime.
+    texto = "2026-09-10T08:00:00-05:00"
+    assert horas_desde(datetime.fromisoformat(texto), CORTE) == horas_desde(texto, CORTE)
 
 
 # --------------------------------------------------------------------------------------
@@ -162,6 +168,12 @@ def test_la_frase_es_la_misma_cada_vez() -> None:
 
 def test_solo_se_usa_el_primer_nombre() -> None:
     assert frase_de_apertura(fila(nombre="Ana Lucía Restrepo"), CORTE).startswith("Ana ")
+
+
+@pytest.mark.parametrize("vacio", [None, "", "   "])
+def test_un_nombre_vacio_o_en_blanco_no_rompe_la_frase(vacio: object) -> None:
+    # Hay registros con el nombre en blanco: `"   ".split()` es una lista vacía.
+    assert frase_de_apertura(fila(nombre=vacio), CORTE).startswith("El cliente ")
 
 
 def test_sin_conversacion_la_frase_lo_dice_y_pide_confirmar() -> None:

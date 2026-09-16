@@ -204,7 +204,7 @@ mostrar con cualquier asesor y no solo con uno. La contraseña es la de `DEMO_PA
 comparte fuera del repositorio.
 
 Antes de cada commit: `uv run ruff check .`, `uv run ruff format .` y `uv run pytest -q`
-(**275 pruebas**; ninguna llama a servicios externos, salvo la de aislamiento, que usa el Supabase
+(**279 pruebas**; ninguna llama a servicios externos, salvo la de aislamiento, que usa el Supabase
 local y se omite sola si no está en ejecución).
 
 ---

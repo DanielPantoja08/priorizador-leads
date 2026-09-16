@@ -146,5 +146,5 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
   README con supuestos, API por PostgREST y próximos pasos, `EXTRACTOR=gemini` en `.env.example`,
   un usuario por asesor activo (40) y 3 gerentes, frase de apertura por lead (plantilla, sin LLM).
   - `pipeline simulate-policy`: al 70 % de capacidad el puntaje captura 9 cierres más que el orden
-    de llegada (+6,2 %); al 50 %, 20 más (+19,6 %); con cupo para todos, ninguna gana. 275 pruebas.
+    de llegada (+6,2 %); al 50 %, 20 más (+19,6 %); con cupo para todos, ninguna gana. 279 pruebas.
   - Falta para entregar: URL pública, workflow programado y presentación.

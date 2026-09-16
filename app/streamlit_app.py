@@ -139,11 +139,15 @@ def otros_leads_de(sb: Client, cliente_id: str, lead_id: str) -> pd.DataFrame:
 # --------------------------------------------------------------------------------------
 
 
-def horas_desde(valor: str | None, corte: date) -> float | None:
-    """Horas entre el registro del lead y el final del día de corte."""
+def horas_desde(valor: str | datetime | None, corte: date) -> float | None:
+    """Horas entre el registro del lead y el final del día de corte.
+
+    PostgREST entrega la fecha como texto ISO, pero un cliente de Postgres la entrega ya convertida:
+    se aceptan las dos para que la función no dependa de por dónde llegaron los datos.
+    """
     if not valor:
         return None
-    registro = datetime.fromisoformat(valor)
+    registro = valor if isinstance(valor, datetime) else datetime.fromisoformat(valor)
     fin = datetime.combine(corte, datetime.max.time()).replace(tzinfo=registro.tzinfo)
     return round((fin - registro).total_seconds() / 3600, 1)
 
@@ -162,7 +166,9 @@ def frase_de_apertura(lead: dict, corte: date) -> str:
     consume cuota y no puede inventar nada. Responde a la queja del enunciado —«el asesor arranca
     de cero en cada llamada»— sin agregar un riesgo de alucinación donde no hacía falta.
     """
-    nombre = (lead.get("nombre") or "El cliente").split()[0]
+    # Se saluda por el primer nombre, pero hay registros con el nombre vacío o en blanco.
+    partes_nombre = (lead.get("nombre") or "").split()
+    nombre = partes_nombre[0] if partes_nombre else "El cliente"
     if not lead.get("ia_conversaciones"):
         modelo = lead.get("modelo") or lead.get("modelo_texto_original")
         pedido = (
