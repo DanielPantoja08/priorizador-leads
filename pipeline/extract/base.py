@@ -13,7 +13,7 @@ from pipeline.ingest import hash_mensajes
 
 # Versiones que entran en la clave de caché (hash_contenido, extractor, prompt_version).
 # Cambiar el prompt o las reglas obliga a subir la versión, lo que invalida la caché (TRD 8.2, 15.2).
-PROMPT_VERSION = "v2"
+PROMPT_VERSION = "v3"
 VERSION_REGLAS = "reglas_v2"
 
 
