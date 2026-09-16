@@ -39,7 +39,7 @@ jobs:
       FECHA_CORTE: ${{ inputs.fecha_corte }}
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.1.0 # sin etiqueta mayor flotante desde la v8
       - name: Instalar el entorno bloqueado por uv.lock
         run: uv sync --frozen
       - name: Revisar estilo
