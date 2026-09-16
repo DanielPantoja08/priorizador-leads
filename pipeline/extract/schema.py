@@ -28,6 +28,10 @@ Objecion = Literal[
     "ninguna",
 ]
 
+# El cliente redondea la cifra al decirla: "7,2 millones" por una moto de 7.190.000. Por debajo de
+# este margen se toma como redondeo y se recorta al precio; por encima, la cifra se descarta.
+TOLERANCIA_PRECIO = 0.05
+
 # Campos que se comparan contra el conjunto de referencia (TRD 8.5).
 CAMPOS_EVALUADOS = (
     "modelo_texto",
@@ -96,7 +100,9 @@ def validar(
 ) -> tuple[Extraccion, list[str]]:
     """Aplica las reglas posteriores de TRD 8.1 y devuelve la extracción corregida y qué se corrigió.
 
-    - La cuota debe estar entre 0 y el precio de lista del modelo; si no, pasa a nulo.
+    - La cuota debe estar entre 0 y el precio de lista del modelo. Si lo supera por menos de
+      `TOLERANCIA_PRECIO` se entiende como redondeo del cliente y se recorta al precio; si lo
+      supera por más, la cifra no es creíble y pasa a nulo. Un valor negativo también pasa a nulo.
     - `cuota > 0` implica `menciona_cuota = SI` y `cuota = 0` implica `NO`.
     """
     correcciones: list[str] = []
@@ -107,8 +113,12 @@ def validar(
         correcciones.append("cuota_negativa")
         cuota = None
     elif cuota is not None and precio_lista is not None and cuota > precio_lista:
-        correcciones.append("cuota_mayor_que_precio")
-        cuota = None
+        if cuota <= precio_lista * (1 + TOLERANCIA_PRECIO):
+            correcciones.append("cuota_redondeada_al_precio")
+            cuota = precio_lista
+        else:
+            correcciones.append("cuota_mayor_que_precio")
+            cuota = None
     datos["cuota_inicial_cop"] = cuota
 
     if cuota is not None:
