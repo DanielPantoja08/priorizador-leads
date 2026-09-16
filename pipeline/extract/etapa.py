@@ -21,7 +21,9 @@ from pipeline.ingest import hash_mensajes
 from pipeline.quality import ColectorCalidad
 
 ARCHIVO_CONVERSACIONES = "conversaciones.json"
-MODELO_GEMINI_POR_DEFECTO = "gemini-2.5-flash"
+# Modelo por defecto si no se fija GEMINI_MODEL. Flash-Lite está pensado para procesamiento
+# simple de datos en volumen, que es justo esta tarea: esquema fijo y temperatura 0.
+MODELO_GEMINI_POR_DEFECTO = "gemini-3.5-flash-lite"
 
 
 def construir_extractor(config: Config, catalogo: Catalogo) -> Extractor:
