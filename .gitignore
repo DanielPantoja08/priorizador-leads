@@ -25,3 +25,6 @@ Thumbs.db
 
 # Temporales del sandbox de herramientas
 .bun-*.node
+
+# Directorios temporales que pytest crea para `tmp_path`
+pytest-of-*/
