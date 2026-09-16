@@ -47,8 +47,11 @@ def sesion_gerente_emp01():
 
 @pytest.fixture(scope="module")
 def sesion_asesor_emp01():
-    """Cliente autenticado como el asesor de EMP-01."""
-    return _sesion("asesor.emp01@example.com")
+    """Cliente autenticado como el primer asesor de EMP-01.
+
+    Hay una cuenta por asesor y el correo se deriva del id (AS-001 -> asesor.as001@example.com).
+    """
+    return _sesion("asesor.as001@example.com")
 
 
 def _sesion(correo: str):
