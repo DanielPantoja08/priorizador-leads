@@ -135,11 +135,20 @@ def test_ignora_ids_que_no_se_pidieron() -> None:
 
 
 def test_respuesta_invalida_cae_a_reglas() -> None:
-    extractor = construir(["esto no es json", "tampoco es json"])
+    extractor = construir(["esto no es json"])
     resultado = extractor.extraer([conversacion("CONV-A")])
     assert extractor.uso_respaldo is True
-    assert extractor.errores == 2  # el lote y el reintento individual
+    assert extractor.errores == 1
     assert resultado[0].pidio_cita is True  # lo resolvieron las reglas
+
+
+def test_lote_fallido_no_se_pide_conversacion_por_conversacion() -> None:
+    # Con la cuota agotada, pedir una por una repetiría el mismo 429 multiplicando la espera.
+    convs = [conversacion(f"CONV-{i}") for i in range(5)]
+    extractor = construir([error_cuota()] * 40, tamano_lote=5)
+    extractor.extraer(convs)
+    assert extractor.llamadas == 5  # los reintentos del lote, ninguna petición individual
+    assert len(extractor.resueltas_por_respaldo) == 5
 
 
 def test_reintenta_ante_error_de_servidor() -> None:
@@ -174,7 +183,7 @@ def test_no_reintenta_errores_del_cliente() -> None:
         [errors.ClientError(400, {"error": {"message": "petición inválida"}})] * 4
     )
     extractor.extraer([conversacion("CONV-A")])
-    assert extractor.llamadas == 2  # el lote y el reintento individual, sin repetir
+    assert extractor.llamadas == 1  # no se reintenta un error que se repetiría igual
     assert extractor.uso_respaldo is True
 
 

@@ -125,23 +125,33 @@ class ExtractorGemini:
                 obtenidas[extraccion.conversacion_id] = extraccion
         return obtenidas
 
-    def _intentar(self, conversaciones: list[dict]) -> dict[str, Extraccion]:
-        """Envuelve `_pedir` contando los errores; nunca propaga."""
+    def _intentar(self, conversaciones: list[dict]) -> tuple[dict[str, Extraccion], bool]:
+        """Envuelve `_pedir` contando los errores; nunca propaga.
+
+        Devuelve lo obtenido y si la petición en sí falló, que no es lo mismo que volver vacía.
+        """
         try:
-            return self._pedir(conversaciones)
+            return self._pedir(conversaciones), False
         except (errors.APIError, json.JSONDecodeError, ValueError):
             self.errores += 1
-            return {}
+            return {}, True
 
     def extraer(self, conversaciones: list[dict]) -> list[Extraccion]:
         """Una extracción por conversación. Lo que el LLM no resuelva lo resuelven las reglas."""
         obtenidas: dict[str, Extraccion] = {}
         for lote in _lotes(conversaciones, self.tamano_lote):
-            obtenidas.update(self._intentar(lote))
-            # Los que no volvieron en la respuesta del lote se reintentan de forma individual.
+            del_lote, fallo = self._intentar(lote)
+            obtenidas.update(del_lote)
+            if fallo:
+                # La petición falló entera (cuota agotada, modelo inexistente, respuesta ilegible).
+                # Pedir cada conversación por separado repetiría el mismo error y multiplicaría la
+                # espera por el tamaño del lote: se deja que las resuelva el respaldo.
+                continue
+            # La respuesta llegó pero omitió conversaciones: esas sí vale la pena pedirlas solas.
             for conversacion in lote:
                 if conversacion["conversacion_id"] not in obtenidas:
-                    obtenidas.update(self._intentar([conversacion]))
+                    individual, _ = self._intentar([conversacion])
+                    obtenidas.update(individual)
 
         faltantes = [c for c in conversaciones if c["conversacion_id"] not in obtenidas]
         if faltantes:
