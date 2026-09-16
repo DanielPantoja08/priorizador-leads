@@ -139,6 +139,7 @@ def test_solo_mirando_es_baja() -> None:
         ("¿Y no tienen algo más económico?", "precio"),
         ("No, eso se me sale del presupuesto", "precio"),
         ("Muy costosa la verdad", "precio"),
+        ("Está por encima de lo que tengo", "precio"),
         ("Es que la inicial está muy alta", "precio"),
         ("Dale pues", "ninguna"),
     ],
