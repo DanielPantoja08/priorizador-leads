@@ -500,7 +500,8 @@ class Extraccion(BaseModel):
 - **Media:** todo lo demás.
 
 **Validación posterior (Pydantic y reglas):**
-- `0 ≤ cuota_inicial_cop ≤ precio_lista`. Si no se cumple, el valor pasa a `null`.
+- `0 ≤ cuota_inicial_cop ≤ precio_lista`. Si la cifra supera el precio en **menos del 5 %** se entiende como redondeo del cliente ("7,2 millones" para una moto de 7.190.000) y se recorta al precio de lista; si lo supera por más, pasa a `null`. Un valor negativo también pasa a `null`.
+- La tabla `extraccion` guarda la salida **tal como la produjo el extractor**: la validación se aplica en cada corrida antes de consolidar, para que los problemas de calidad sean los mismos se use o no la caché.
 - `modelo_texto` se normaliza con `catalog_match`.
 - Consistencia entre cuota y mención: `cuota > 0` implica `menciona_cuota = SI`, y `cuota = 0` implica `NO`.
 

@@ -32,9 +32,11 @@ supabase/          config.toml, migrations/ (esquema, rls, vistas), seed.sql
 data/raw/          insumos sintéticos entregados (SOLO LECTURA)
 eda/               análisis exploratorio reproducible -> docs/EDA.md
 pipeline/          config, db, quality, ingest, normalize, catalog_match, dedup,
-                   extract/ (schema, base, rules, gemini, prompts/), scoring, assign
+                   extract/ (schema, base, rules, gemini, consolidar, etapa, prompts/),
+                   scoring, assign
 scripts/           crear_usuarios_demo.py (único uso de service_role)
-evaluation/        gold_40_borrador.json, gold_40.json, eval_extraction.py, validate_scoring.py
+evaluation/        muestra_gold.py, gold_40_muestra.json, gold_40_borrador.json, gold_40.json,
+                   eval_extraction.py, validate_scoring.py
 app/               streamlit_app.py
 tests/             pytest, sin red
 docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
@@ -99,7 +101,7 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
   - Llaves heredadas de Supabase (anon y service_role).
   - `docs/PROMPT.md` fuera del repositorio.
   - ruff no formatea los documentos.
-- **Fase B terminada, en punto de control B**:
+- **Fase B cerrada**:
   - Migraciones: esquema, RLS con privilegios explícitos y vistas `security_invoker`.
   - `seed.sql` con las empresas.
   - Pipeline `run`: ingest → normalize → catalog_match → dedup → load. Es idempotente.
@@ -112,3 +114,17 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
   - Esta versión de Supabase no concede privilegios por defecto: se conceden en la migración de RLS.
   - Herramientas: Supabase CLI 2.117 (scoop), uv 0.9.24, Docker 28.4, Python 3.12.
   - El EDA reutiliza `pipeline/normalize.py`: una sola implementación de las reglas 6 y 6.1.
+- **Fase C terminada, en punto de control C**:
+  - Extracción con dos implementaciones tras una misma interfaz: `rules` (regex, sin red) y
+    `gemini` (lotes, salida estructurada, reintentos y respaldo por reglas). **Gemini solo se ha
+    probado con simulaciones: falta `GEMINI_API_KEY` para ejercitarlo contra el servicio real.**
+  - `pipeline run` incluye la etapa de extracción; `pipeline eval` se niega a evaluar mientras el
+    conjunto de referencia no esté revisado por una persona.
+- Decisiones de la Fase C:
+  - La plata que el cliente declara de contado se registra en `cuota_inicial_cop`.
+  - "La inicial está muy alta" es objeción de `precio`, no de `sin_inicial`.
+  - Cuota por encima del precio de lista: hasta un 5 % es redondeo del cliente y se recorta; por
+    encima se descarta.
+  - `extraccion` guarda la salida cruda del extractor y la validación corre en cada ejecución, para
+    que los problemas de calidad no dependan de la caché.
+  - La caché de extracción va por `(hash_contenido, extractor, prompt_version)`.
