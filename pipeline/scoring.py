@@ -242,6 +242,11 @@ def calcular(
             suyas, canales_por_cliente.get((fila["empresa_id"], fila["clave_dedup"]), 1)
         )
         urgencia, razones_c, reciente = _urgencia(fila["estado_gestion"], horas)
+        # Lo que el extractor afirmó sin cita en el chat no puntuó: se deja dicho en las razones.
+        razones_c += [
+            {"factor": f"sin respaldo en el chat, se toma como desconocido: {campo}", "puntos": 0}
+            for campo in (suyas.sin_respaldo if suyas else ())
+        ]
 
         puntajes.append(
             Puntaje(

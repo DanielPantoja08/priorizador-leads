@@ -225,3 +225,9 @@ def test_ningun_lead_tiene_horas_negativas() -> None:
     df = pd.DataFrame([lead("LEAD-1")], dtype="object")
     corte = momento_corte(df, CORTE.date())
     assert corte >= CORTE
+
+
+def test_lo_que_no_tiene_respaldo_queda_en_las_razones_sin_puntos() -> None:
+    p = puntuar([lead("LEAD-1")], senales(cliente_respondio=True, sin_respaldo=("pidio_cita",)))[0]
+    razon = next(r for r in p.razones if "sin respaldo" in r["factor"])
+    assert razon["puntos"] == 0 and "pidio_cita" in razon["factor"]
