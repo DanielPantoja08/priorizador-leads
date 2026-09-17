@@ -5,7 +5,7 @@ name: pipeline-leads
 
 on:
   schedule:
-    - cron: "0 11 * * *" # 06:00 America/Bogota (GitHub usa UTC)
+    - cron: "37 15 * * *" # 10:37 America/Bogota (GitHub usa UTC); temporal para validar el cron
   # Llegan insumos nuevos: la lista se recalcula sin esperar al día siguiente.
   push:
     branches: [main]
