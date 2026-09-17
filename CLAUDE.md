@@ -119,32 +119,32 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
   - Si una petición falla entera no se reintenta una por una: solo se piden por separado las
     conversaciones que el modelo omitió en una respuesta que sí llegó.
 - **Fase D terminada, en punto de control D**:
-  - `scoring.py` (puntaje v1, temperatura y razones) y `assign.py` (serpentina con capacidad).
-  - Corrida 2026-09-10: 981 elegibles, 637 asignados y 344 sin cupo (capacidad activa 694);
-    780 Frío, 142 Caliente y 59 Tibio. Huellas iguales entre corridas: es idempotente.
-  - `pipeline validate-scoring` reproduce el TRD 9.3: Caliente/Frío 2,16 veces (criterio 1,8).
+  - `scoring.py` (temperatura y razones) y `assign.py` (serpentina con capacidad). Corrida
+    2026-09-10: 981 elegibles, 637 asignados, 344 sin cupo (capacidad 694). Idempotente.
 - Decisiones de la Fase D:
-  - Un lead con estado avanzado y sin fecha de contacto puntúa por su estado, no por la espera: el
-    contacto ocurrió y lo que falta es el dato (ya lleva `estado_sin_fecha_contacto`).
+  - Estado avanzado sin fecha de contacto puntúa por su estado (`estado_sin_fecha_contacto`).
   - `momento_corte` es el último registro del día de corte, no el reloj: conserva la idempotencia.
   - La serpentina ordena los asesores por `asesor_id` para que el reparto sea reproducible.
-  - Los pesos viven solo en `pipeline/scoring.py`; el EDA y la validación los importan, así que
-    regenerar el EDA tras el refactor dio un archivo idéntico.
-  - 565 de los 981 elegibles no tienen conversación: su techo son 2 puntos y quedan en Frío. Es la
-    limitación declarada en TRD 9.2, no un defecto.
+  - Los pesos viven solo en `pipeline/scoring.py`; el EDA y la validación los importan.
 - **Fase E terminada, en punto de control E**:
   - `senales_lead` guarda las señales y su procedencia (`extractor`, `prompt_version`); la vista
     diaria las expone. Migraciones con `supabase migration up --local` para no perder la caché.
-  - `app/streamlit_app.py`: lista del asesor, tablero y «Cómo prioriza». Probada con Playwright:
-    4 defectos corregidos (evidencia mezclada, `orden` flotante, `#` a unos, cabeceras crudas).
+  - `app/streamlit_app.py`: lista del asesor, tablero y «Cómo prioriza», probada con Playwright.
 - Decisiones de la Fase E:
   - El aislamiento se prueba en la base, no en la interfaz: la app usa la llave anónima y el JWT.
   - La consolidación no se reescribe en SQL: una sola implementación, la de `consolidar.py`.
-  - `orden` es por asesor: en la vista de empresa se muestra el asesor y se ordena por prioridad.
-  - La contraseña de demostración no se teclea en el navegador.
+  - `orden` es por asesor (la vista de empresa muestra el asesor). La contraseña demo no se teclea.
 - **Revisión contra el enunciado**: `docs/arquitectura.md`, README con supuestos y API, 40 asesores
-  y 3 gerentes, frase de apertura sin LLM, `simulate-policy` (70 %: +9 cierres, +6,2 %). 298 pruebas.
-- `eval-robustness`: 97 frases fijas; reformuladas, reglas 99,4 → 87,2 %, Gemini 97,5–98,6 %. Revisadas por una persona.
-- **Fase F**: repo público, Supabase remoto (sa-east-1, session pooler 5432), workflow verde a mano y
-  https://priorizador-leads.streamlit.app con aislamiento verificado. Credenciales en `.env.remoto`
-  (ignorado). `setup-uv` sin etiqueta mayor: versión exacta. Falta: cron verde y presentación.
+  y 3 gerentes, frase de apertura sin LLM. `eval-robustness`: 97 frases fijas; reformuladas, reglas
+  99,4 → 87,2 %, Gemini 97,5–98,6 % (revisadas por una persona).
+- **Fase F**: repo público, Supabase remoto (sa-east-1, session pooler 5432) y
+  https://priorizador-leads.streamlit.app. Credenciales en `.env.remoto` (ignorado). `setup-uv` con
+  versión exacta. Falta: cron verde y presentación.
+- **Revisión de fallas externas (2026-09-17)**, aplicada en local y remoto. 328 pruebas:
+  - Puntaje **v2**: sin conversación suma `PUNTOS_SIN_CONVERSACION` (valor esperado 2,27 → 2) y
+    es «Sin calificar». Remoto: 142 Caliente, 59 Tibio, 221 Frío, 559 Sin calificar.
+  - Validación **parcial** (pesos vistos en la prueba); razón 2,16 con IC 1,01–4,36: «indicio».
+  - `simulate-policy` con decaimiento: A + urgencia +7,1 % sobre «más reciente primero» (70 %).
+  - Evidencia del LLM comprobada contra el cliente (`extract/evidencia.py`): 10 sin respaldo.
+  - RLS: el asesor solo ve sus clientes asignados (`privado.clientes_asignados()`, `security definer`).
+  - `ci.yml` aparte; `pipeline.yml` también en push a `data/raw/**` y abre issue si falla.
