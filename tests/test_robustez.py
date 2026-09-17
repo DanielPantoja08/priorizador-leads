@@ -9,6 +9,7 @@ from evaluation.eval_extraction import RUTA_GOLD
 from evaluation.robustez import (
     RUTA_REFORMULACIONES,
     cargar_reformulaciones,
+    molde,
     reformular,
     reformular_conversaciones,
 )
@@ -74,6 +75,14 @@ def test_sin_revisar_se_informa_como_tal(tmp_path) -> None:
     ruta = tmp_path / "r.json"
     ruta.write_text(json.dumps({"sustituciones": []}), encoding="utf-8")
     assert cargar_reformulaciones(ruta)[1] is False
+
+
+def test_el_molde_quita_modelo_y_cifras() -> None:
+    # Dos clientes que escriben la misma frase con otra moto y otra cifra comparten molde.
+    nombres = ["Bajaj", "Pulsar NS 160", "Honda", "CB 190R"]
+    a = molde("Esa sí me sirve. Tengo 4 palos de inicial, la Bajaj Pulsar NS 160", nombres)
+    b = molde("Esa sí me sirve. Tengo 2 palos de inicial, la Honda CB 190R", nombres)
+    assert a == b == "esa sí me sirve. tengo<n> palos de inicial, la <moto> <moto>"
 
 
 # --------------------------------------------------------------------------------------

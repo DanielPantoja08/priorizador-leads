@@ -27,6 +27,8 @@ import re
 import sys
 from pathlib import Path
 
+import pandas as pd
+
 RAIZ = Path(__file__).resolve().parent.parent
 if str(RAIZ) not in sys.path:
     sys.path.insert(0, str(RAIZ))
@@ -89,6 +91,24 @@ def reformular_conversaciones(
     return nuevas, usadas, cambiados
 
 
+def molde(texto: str, nombres: list[str]) -> str:
+    """La frase sin lo que cambia entre clientes: el modelo pasa a <MOTO> y las cifras a <N>."""
+    patron = "|".join(re.escape(n) for n in sorted(nombres, key=len, reverse=True))
+    texto = re.sub(patron, "<MOTO>", texto, flags=re.IGNORECASE)
+    return re.sub(r"\$?\s?\d[\d.,]*", "<N>", texto).strip().lower()
+
+
+def vocabulario(conversaciones: list[dict], catalogo: pd.DataFrame) -> tuple[int, int]:
+    """Cuántos mensajes escriben los clientes y de cuántas frases fijas salen."""
+    nombres = [
+        *catalogo["marca"],
+        *catalogo["linea"],
+        *(catalogo["marca"] + " " + catalogo["linea"]),
+    ]
+    textos = [m["texto"] for c in conversaciones for m in c["mensajes"] if m["emisor"] == "cliente"]
+    return len(textos), len({molde(t, nombres) for t in textos})
+
+
 def main(con_gemini: bool = False) -> int:
     """Imprime la exactitud por campo antes y después de reformular."""
     try:
@@ -98,7 +118,10 @@ def main(con_gemini: bool = False) -> int:
         return 2
     sustituciones, revisado = cargar_reformulaciones()
 
-    por_id = {c["conversacion_id"]: c for c in leer_conversaciones()}
+    todas = leer_conversaciones()
+    catalogo = leer_csv("catalogo_motos.csv")
+    mensajes, moldes = vocabulario(todas, catalogo)
+    por_id = {c["conversacion_id"]: c for c in todas}
     originales = [
         por_id[r["conversacion_id"]] for r in referencia if r["conversacion_id"] in por_id
     ]
@@ -112,7 +135,7 @@ def main(con_gemini: bool = False) -> int:
         print(f"Sustituciones que no se aplicaron: {sin_uso}", file=sys.stderr)
         return 2
 
-    marcas = sorted(set(leer_csv("catalogo_motos.csv")["marca"].str.strip()))
+    marcas = sorted(set(catalogo["marca"].str.strip()))
     reglas = ExtractorReglas(marcas)
     marcadores = {
         "reglas · original": evaluar(referencia, _por_id(reglas.extraer(originales))),
@@ -135,6 +158,10 @@ def main(con_gemini: bool = False) -> int:
                 )
 
     print("Robustez de la extracción · TRD 8.5\n")
+    print(
+        f"Vocabulario de los datos: los {mensajes} mensajes de cliente de las {len(todas)} "
+        f"conversaciones salen de {moldes} frases fijas (solo cambian el modelo y las cifras).\n"
+    )
     if not revisado:
         print("**Cifras preliminares:** una persona todavía no revisa las reformulaciones.\n")
     print(
