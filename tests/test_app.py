@@ -12,7 +12,15 @@ from datetime import date, datetime
 import pandas as pd
 import pytest
 
-from app.streamlit_app import frase_de_apertura, horas_desde, lead_de, pesos, tabla_de
+from app.streamlit_app import (
+    FILAS_POR_PAGINA,
+    frase_de_apertura,
+    horas_desde,
+    lead_de,
+    pesos,
+    tabla_de,
+    todas_las_filas,
+)
 
 CORTE = date(2026, 9, 10)
 
@@ -270,3 +278,26 @@ def test_una_conversacion_sin_datos_no_inventa_nada() -> None:
              ia_forma_pago="no_informa", ia_pidio_cita=False), CORTE
     )  # fmt: skip
     assert "escribió sin dar detalles" in frase
+
+
+class ConsultaFalsa:
+    """Imita a postgrest-py: `.range()` agrega parámetros y el servidor corta en `max_rows`."""
+
+    def __init__(self, total: int) -> None:
+        self.total, self.rangos = total, []
+
+    def range(self, inicio: int, fin: int) -> ConsultaFalsa:
+        self.rangos.append((inicio, fin))
+        return self
+
+    def execute(self):
+        # Si la consulta se reutilizara, PostgREST vería varios `offset` y usaría el primero.
+        inicio, fin = self.rangos[0]
+        fin = min(fin, inicio + FILAS_POR_PAGINA - 1, self.total - 1)
+        return type("Respuesta", (), {"data": [{"i": i} for i in range(inicio, fin + 1)]})
+
+
+@pytest.mark.parametrize("total", [0, 5, FILAS_POR_PAGINA, FILAS_POR_PAGINA * 2 + 7])
+def test_se_traen_todas_las_filas_aunque_pasen_del_limite(total: int) -> None:
+    filas = todas_las_filas(lambda: ConsultaFalsa(total))
+    assert [f["i"] for f in filas] == list(range(total))

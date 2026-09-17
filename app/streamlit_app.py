@@ -9,6 +9,7 @@ tuviera un error de filtrado, la base seguiría sin devolver filas de otra empre
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import date, datetime
 
 import pandas as pd
@@ -23,6 +24,9 @@ ORDEN_TEMPERATURA = ["Caliente", "Tibio", "Frío"]
 
 ETIQUETA_FORMA_PAGO = {"contado": "Contado", "credito": "Crédito", "no_informa": "No informa"}
 ETIQUETA_MENCION = {"SI": "Sí", "NO": "No", "NO_INFORMA": "No informa"}
+
+# PostgREST corta cada respuesta en `max_rows` (1.000 en supabase/config.toml) sin avisar.
+FILAS_POR_PAGINA = 1000
 
 
 # --------------------------------------------------------------------------------------
@@ -75,18 +79,40 @@ def perfil_de(sb: Client) -> dict:
 # --------------------------------------------------------------------------------------
 
 
+def todas_las_filas(armar: Callable[[], object]) -> list[dict]:
+    """Todas las filas de una consulta, página por página.
+
+    Sin esto, una consulta de más de `FILAS_POR_PAGINA` filas llega truncada y nadie se entera.
+    `armar` devuelve la consulta **nueva** en cada llamada: `.range()` agrega parámetros a la que
+    recibe, así que reutilizarla repetiría el desplazamiento. La consulta debe tener un orden
+    total, o dos páginas podrían traer la misma fila.
+    """
+    filas: list[dict] = []
+    while True:
+        pagina = armar().range(len(filas), len(filas) + FILAS_POR_PAGINA - 1).execute().data
+        filas.extend(pagina)
+        if len(pagina) < FILAS_POR_PAGINA:
+            return filas
+
+
 def fechas_disponibles(sb: Client) -> list[date]:
     """Fechas de corte que el usuario puede consultar, de la más reciente a la más antigua."""
-    filas = sb.table("asignacion").select("fecha_corte").execute().data
+    filas = todas_las_filas(
+        lambda: sb.table("asignacion").select("fecha_corte").order("fecha_corte").order("lead_id")
+    )
     return sorted({date.fromisoformat(f["fecha_corte"]) for f in filas}, reverse=True)
 
 
 def leads_de(sb: Client, fecha: date, asesor_id: str | None) -> pd.DataFrame:
     """Leads de la fecha de corte. Si se indica un asesor, solo los suyos."""
-    consulta = sb.table("v_mis_leads_hoy").select("*").eq("fecha_corte", fecha.isoformat())
-    if asesor_id:
-        consulta = consulta.eq("asesor_id", asesor_id)
-    return pd.DataFrame(consulta.order("orden").execute().data)
+
+    def armar():
+        consulta = sb.table("v_mis_leads_hoy").select("*").eq("fecha_corte", fecha.isoformat())
+        if asesor_id:
+            consulta = consulta.eq("asesor_id", asesor_id)
+        return consulta.order("orden").order("lead_id")  # `orden` se repite entre asesores
+
+    return pd.DataFrame(todas_las_filas(armar))
 
 
 def conversacion_de(sb: Client, ids: list[str]) -> pd.DataFrame:
