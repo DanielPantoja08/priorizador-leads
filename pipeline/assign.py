@@ -36,7 +36,7 @@ def _asesores_de(asesores: pd.DataFrame, punto_venta_id: str) -> list[dict]:
 
 
 def _serpentina(cupos: list[str]) -> list[str]:
-    """Recorre la lista de ida y de vuelta sin repetir los extremos: A B C C B A A B C..."""
+    """Un ciclo de ida y vuelta que repite los extremos en cada giro: A B C C B A, y vuelve a empezar."""
     if not cupos:
         return []
     vuelta = list(cupos) + list(reversed(cupos))
