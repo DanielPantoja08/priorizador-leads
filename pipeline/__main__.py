@@ -116,7 +116,15 @@ def main() -> None:
         action="store_true",
         help="además de las reglas, mide Gemini (consume cuota)",
     )
+    comandos.add_parser(
+        "check-migrations", help="falla si la base no tiene las migraciones del repositorio"
+    )
     args = parser.parse_args()
+
+    if args.comando == "check-migrations":
+        from pipeline.migraciones import main as revisar_migraciones
+
+        sys.exit(revisar_migraciones())
 
     if args.comando == "run":
         if args.extractor:
