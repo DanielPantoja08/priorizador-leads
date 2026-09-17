@@ -17,7 +17,7 @@ from pipeline.extract.consolidar import Senales, consolidar
 from pipeline.extract.evidencia import campos_sin_respaldo
 from pipeline.extract.gemini import ExtractorGemini
 from pipeline.extract.rules import ExtractorReglas
-from pipeline.extract.schema import validar
+from pipeline.extract.schema import como_desconocidos, validar
 from pipeline.ingest import hash_mensajes
 from pipeline.quality import ColectorCalidad
 
@@ -75,7 +75,7 @@ def ejecutar(
     empresas = dict(zip(leads["lead_id"], leads["empresa_id"], strict=True))
     modelo_llm = getattr(extractor, "modelo", None)
 
-    filas, por_conversacion, sin_respaldo = [], {}, 0
+    filas, por_conversacion, sin_respaldo = [], {}, {}
     for conversacion, extraccion in zip(conversaciones, extracciones, strict=True):
         conversacion_id = conversacion["conversacion_id"]
         empresa = empresas.get(conversacion["lead_id"])  # None en las huérfanas
@@ -87,9 +87,13 @@ def ejecutar(
         for tipo in correcciones:
             colector.registrar(ARCHIVO_CONVERSACIONES, conversacion_id, "cuota_inicial_cop", tipo, extraccion.cuota_inicial_cop, "valor corregido por la validación", empresa)  # fmt: skip
         # Igual con la evidencia: se comprueba siempre y la base guarda la que dio el extractor.
-        for campo in campos_sin_respaldo(extraccion.evidencia, conversacion["mensajes"]):
-            sin_respaldo += 1
-            colector.registrar(ARCHIVO_CONVERSACIONES, conversacion_id, f"evidencia.{campo}", "evidencia_sin_respaldo", extraccion.evidencia[campo], "no se muestra como cita", empresa)  # fmt: skip
+        # Un campo cuya cita no aparece en la conversación se toma como desconocido: no puntúa.
+        campos = campos_sin_respaldo(extraccion.evidencia, conversacion["mensajes"])
+        for campo in campos:
+            colector.registrar(ARCHIVO_CONVERSACIONES, conversacion_id, f"evidencia.{campo}", "evidencia_sin_respaldo", extraccion.evidencia[campo], "se toma como desconocido y no se cita", empresa)  # fmt: skip
+        if campos:
+            sin_respaldo[conversacion_id] = campos
+            validada = como_desconocidos(validada, campos)
 
         por_conversacion[conversacion_id] = validada
         filas.append({
@@ -113,7 +117,7 @@ def ejecutar(
         })  # fmt: skip
 
     guardadas = load.cargar_extracciones(conn, filas)
-    senales = consolidar(leads, conversaciones, por_conversacion)
+    senales = consolidar(leads, conversaciones, por_conversacion, sin_respaldo)
     # Las señales se persisten aquí, junto a su procedencia: esta etapa es la única que sabe qué
     # extractor y qué versión de prompt las produjeron.
     guardadas_senales = load.cargar_senales(
@@ -126,7 +130,7 @@ def ejecutar(
         "extraccion_reusadas": len(conversaciones) - nuevas,
         "extraccion_respaldo": len(getattr(extractor, "resueltas_por_respaldo", ())),
         "leads_con_senales": len(senales),
-        "evidencia_sin_respaldo": sin_respaldo,
+        "evidencia_sin_respaldo": sum(len(c) for c in sin_respaldo.values()),
         # Métricas del LLM; con el extractor por reglas quedan en cero.
         "llamadas_llm": getattr(extractor, "llamadas", 0),
         "errores_llm": getattr(extractor, "errores", 0),

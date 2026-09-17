@@ -34,6 +34,8 @@ class Senales:
     cliente_respondio: bool = False
     conversaciones: int = 0
     conversacion_ids: tuple[str, ...] = field(default_factory=tuple)
+    # Campos que se tomaron como desconocidos porque su evidencia no aparece en el chat.
+    sin_respaldo: tuple[str, ...] = field(default_factory=tuple)
 
 
 def _orden(conversacion: dict) -> tuple[str, str]:
@@ -51,6 +53,7 @@ def consolidar(
     leads: pd.DataFrame,
     conversaciones: list[dict],
     extracciones: dict[str, Extraccion],
+    sin_respaldo: dict[str, list[str]] | None = None,
 ) -> dict[str, Senales]:
     """Señales por lead principal, reuniendo las conversaciones de todos los leads del cliente.
 
@@ -82,11 +85,16 @@ def consolidar(
         if lead_id is None:
             continue
         ordenadas = sorted(sus_conversaciones, key=_orden)
-        senales[lead_id] = _resumir(lead_id, ordenadas, extracciones)
+        senales[lead_id] = _resumir(lead_id, ordenadas, extracciones, sin_respaldo or {})
     return senales
 
 
-def _resumir(lead_id: str, ordenadas: list[dict], extracciones: dict[str, Extraccion]) -> Senales:
+def _resumir(
+    lead_id: str,
+    ordenadas: list[dict],
+    extracciones: dict[str, Extraccion],
+    sin_respaldo: dict[str, list[str]],
+) -> Senales:
     """Aplica las reglas de TRD 8.4 sobre las conversaciones ya ordenadas por fecha."""
     ext = [extracciones[c["conversacion_id"]] for c in ordenadas]
 
@@ -114,4 +122,9 @@ def _resumir(lead_id: str, ordenadas: list[dict], extracciones: dict[str, Extrac
         cliente_respondio=any(e.cliente_respondio for e in ext),
         conversaciones=len(ext),
         conversacion_ids=tuple(c["conversacion_id"] for c in ordenadas),
+        sin_respaldo=tuple(
+            sorted(
+                {campo for c in ordenadas for campo in sin_respaldo.get(c["conversacion_id"], ())}
+            )
+        ),
     )

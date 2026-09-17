@@ -128,3 +128,24 @@ def validar(
             datos["menciona_cuota"] = esperado
 
     return Extraccion(**datos), correcciones
+
+
+# La cuota y su mención son una sola afirmación: si una no tiene respaldo, tampoco la otra.
+CAMPOS_DE_CUOTA = ("cuota_inicial_cop", "menciona_cuota")
+
+
+def como_desconocidos(extraccion: Extraccion, campos: list[str]) -> Extraccion:
+    """La extracción con esos campos devueltos a su valor por defecto, que es el «no se sabe».
+
+    Se usa con los campos cuya evidencia no aparece en la conversación: un valor sin respaldo no
+    debe sumar ni restar en el puntaje. Los valores por defecto de `Extraccion` son justamente los
+    neutros (`NO_INFORMA`, `no_informa`, intención media, sin objeción, respondió).
+    """
+    datos = extraccion.model_dump()
+    for campo in campos:
+        for afectado in CAMPOS_DE_CUOTA if campo in CAMPOS_DE_CUOTA else (campo,):
+            if afectado in Extraccion.model_fields and afectado != "conversacion_id":
+                datos[afectado] = Extraccion.model_fields[afectado].get_default(
+                    call_default_factory=True
+                )
+    return Extraccion(**datos)

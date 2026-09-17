@@ -127,3 +127,15 @@ def test_fecha_ilegible_no_gana_la_prioridad() -> None:
         "CONV-BUENA": Extraccion(conversacion_id="CONV-BUENA", intencion="alta"),
     }
     assert consolidar(leads, convs, ext)["LEAD-1"].intencion == "alta"
+
+
+def test_los_campos_sin_respaldo_de_todas_las_conversaciones_llegan_al_lead() -> None:
+    leads = tabla_leads(("LEAD-1", "EMP-01", "tel:573001112233", True))
+    convs = [
+        conversacion("CONV-A", "LEAD-1", "2026-09-01 10:00:00"),
+        conversacion("CONV-B", "LEAD-1", "2026-09-05 10:00:00"),
+    ]
+    ext = {c["conversacion_id"]: Extraccion(conversacion_id=c["conversacion_id"]) for c in convs}
+    sin_respaldo = {"CONV-A": ["pidio_cita"], "CONV-B": ["intencion", "pidio_cita"]}
+    senales = consolidar(leads, convs, ext, sin_respaldo)["LEAD-1"]
+    assert senales.sin_respaldo == ("intencion", "pidio_cita")

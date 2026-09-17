@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from pipeline.extract.schema import Extraccion, ExtraccionLLM, validar
+from pipeline.extract.schema import Extraccion, ExtraccionLLM, como_desconocidos, validar
 
 PRECIO = 7_190_000
 
@@ -81,3 +81,31 @@ def test_la_evidencia_del_llm_se_convierte_en_diccionario() -> None:
         "pidio_cita": "¿Mañana los visito?",
         "forma_pago": "De contado",
     }
+
+
+# --- Campos sin respaldo en el chat ------------------------------------------------------------
+
+
+def test_un_campo_sin_respaldo_vuelve_a_su_valor_desconocido() -> None:
+    e = Extraccion(conversacion_id="C1", pidio_cita=True, intencion="baja", objecion="precio")
+    limpia = como_desconocidos(e, ["pidio_cita", "intencion"])
+    assert (limpia.pidio_cita, limpia.intencion) == (False, "media")
+    assert limpia.objecion == "precio"  # lo que sí tiene respaldo no se toca
+
+
+def test_la_cuota_y_su_mencion_caen_juntas() -> None:
+    e = Extraccion(conversacion_id="C1", cuota_inicial_cop=2_000_000, menciona_cuota="SI")
+    limpia = como_desconocidos(e, ["menciona_cuota"])
+    assert (limpia.cuota_inicial_cop, limpia.menciona_cuota) == (None, "NO_INFORMA")
+
+
+def test_un_no_respondio_sin_respaldo_deja_de_restar() -> None:
+    limpia = como_desconocidos(
+        Extraccion(conversacion_id="C1", cliente_respondio=False), ["cliente_respondio"]
+    )
+    assert limpia.cliente_respondio is True
+
+
+def test_la_evidencia_original_se_conserva() -> None:
+    e = Extraccion(conversacion_id="C1", pidio_cita=True, evidencia={"pidio_cita": "inventado"})
+    assert como_desconocidos(e, ["pidio_cita"]).evidencia == {"pidio_cita": "inventado"}
