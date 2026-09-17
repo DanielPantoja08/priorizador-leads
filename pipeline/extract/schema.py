@@ -138,8 +138,12 @@ def como_desconocidos(extraccion: Extraccion, campos: list[str]) -> Extraccion:
     """La extracción con esos campos devueltos a su valor por defecto, que es el «no se sabe».
 
     Se usa con los campos cuya evidencia no aparece en la conversación: un valor sin respaldo no
-    debe sumar ni restar en el puntaje. Los valores por defecto de `Extraccion` son justamente los
-    neutros (`NO_INFORMA`, `no_informa`, intención media, sin objeción, respondió).
+    cuenta como dicho. Los valores por defecto de `Extraccion` son los del «no se sabe»
+    (`NO_INFORMA`, `no_informa`, intención media, sin objeción, respondió).
+
+    Eso no siempre vale 0 puntos: el campo puntúa como el estado desconocido según el histórico
+    (`scoring.ESTADOS_QUE_PUNTUAN`). Una forma de pago «crédito» sin cita vuelve a «no informa» y
+    suma +1, porque en el histórico «no informa» cierra como contado.
     """
     datos = extraccion.model_dump()
     for campo in campos:
