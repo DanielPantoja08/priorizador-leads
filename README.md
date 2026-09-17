@@ -63,17 +63,22 @@ después. Con gestión: cotización enviada 3, en proceso o no contesta 2, conta
 
 ### Validación contra el histórico (`uv run python -m pipeline validate-scoring`)
 
-Corte temporal: se entrena antes del 15 de junio de 2026 y se mide desde esa fecha, sobre datos que
-no participaron en la elección de los pesos.
+Corte temporal: antes del 15 de junio de 2026 es entrenamiento y desde esa fecha, prueba. **La
+validación es parcial:** los pesos se eligieron con las tasas de todo el histórico, ventana de prueba
+incluida, así que esa ventana no es una muestra que el puntaje no haya visto. Se probó derivarlos
+solo del entrenamiento (regresión logística con las mismas cuatro señales) y ordena peor en la
+prueba (AUC 0,583 contra 0,602), así que se mantienen.
 
-| Temperatura | Cierre en la ventana de prueba | n |
-|---|---|---|
-| Caliente | 15,7 % | 83 |
-| Tibio | 11,1 % | 271 |
-| Frío | 7,2 % | 221 |
+| Temperatura | Cierre en la ventana de prueba | IC 95 % (Wilson) | Cierres / n |
+|---|---|---|---|
+| Caliente | 15,7 % | 9,4 – 25,0 % | 13 / 83 |
+| Tibio | 11,1 % | 7,9 – 15,4 % | 30 / 271 |
+| Frío | 7,2 % | 4,5 – 11,4 % | 16 / 221 |
 
-Un Caliente cierra **2,16 veces** más que un Frío; el criterio de aceptación era 1,8. El AUC es
-0,577 en entrenamiento y 0,602 en prueba: **el puntaje ordena, no predice con certeza.**
+Un Caliente cierra **2,16 veces** más que un Frío, con un intervalo al 95 % (bootstrap) de **1,01 a
+4,36**. El criterio de aceptación era 1,8 y queda dentro del intervalo: es un **indicio de
+separación, no un criterio demostrado**, con 29 cierres entre los dos grupos. El AUC es 0,577 en
+entrenamiento y 0,602 en prueba: **el puntaje ordena, no predice con certeza.**
 
 ### Cuántos cierres más son (`uv run python -m pipeline simulate-policy`)
 
