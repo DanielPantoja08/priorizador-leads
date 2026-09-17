@@ -555,6 +555,10 @@ La prioridad es la suma de tres componentes, y cada lead muestra los factores qu
 | Modelo de $10 M o más | 11,5 % | 8,5 % | +2 |
 | Pago de contado | 11,8 % | 8,4 % | +1 |
 
+Cita, cuota y contado solo se conocen si el cliente escribió por WhatsApp. Un lead **sin
+conversación** no cuenta como un «no»: suma +2, lo que valen en promedio esas tres señales en el
+histórico, más el precio del modelo, y su temperatura es **Sin calificar**. Califíquelo en la llamada.
+
 **B. Ajuste por conversación (−3 a +3)** — **heurístico**: el histórico no contiene estas señales,
 así que sus pesos no están validados. Intención alta +2, baja −2; objeción de centrales o sin
 inicial −1; el cliente no respondió −1; escribió por varios canales +1.
@@ -562,36 +566,39 @@ inicial −1; el cliente no respondió −1; escribió por varios canales +1.
 **C. Urgencia (0 a 5)** — sin contacto: 5 si lleva menos de 2 h, 4 hasta 24 h, 2 hasta 72 h y 1
 después. Con gestión: cotización enviada 3, en proceso o no contesta 2, contactado 1.
 
-La **temperatura** usa solo A + B: Caliente ≥ 6, Tibio 3 a 5, Frío ≤ 2.
+La **temperatura** usa solo A + B: Caliente ≥ 6, Tibio 3 a 5, Frío ≤ 2; sin conversación, Sin
+calificar.
 
 ### Qué tan bien funciona
 
 Validación con corte temporal (entrenamiento antes del 15 de junio de 2026, prueba desde esa fecha):
 
-| Temperatura | Cierre en la ventana de prueba | n |
-|---|---|---|
-| Caliente | 15,7 % | 83 |
-| Tibio | 11,1 % | 271 |
-| Frío | 7,2 % | 221 |
+| Temperatura | Cierre en la ventana de prueba | IC 95 % | Cierres / n |
+|---|---|---|---|
+| Caliente | 15,7 % | 9,4 – 25,0 % | 13 / 83 |
+| Tibio | 11,1 % | 7,9 – 15,4 % | 30 / 271 |
+| Frío | 7,2 % | 4,5 – 11,4 % | 16 / 221 |
 
-Un Caliente cierra **2,16 veces** más que un Frío (criterio de aceptación: 1,8). El AUC es 0,602:
-el puntaje **ordena**, no predice con certeza. Reproducible con
-`uv run python -m pipeline validate-scoring`.
+Un Caliente cierra **2,16 veces** más que un Frío, con un intervalo de 1,01 a 4,36. El criterio
+de aceptación (1,8) cae dentro: es un **indicio de separación**, no una prueba. Y la validación es
+parcial, porque los pesos se eligieron mirando todo el histórico. El AUC es 0,602: el puntaje
+**ordena**, no predice con certeza. Reproducible con `uv run python -m pipeline validate-scoring`.
 
 ### Qué significa en ventas
 
-Con la capacidad de hoy —694 cupos para 981 leads elegibles— atender por puntaje en vez de por
-orden de llegada habría capturado **9 cierres más** sobre el histórico, un 6,2 %. La ganancia
-depende de cuán escaso sea el cupo: si alcanzara solo para la mitad de la demanda serían 20 cierres
-más (19,6 %); si alcanzara para todos, ninguna política ganaría, porque no sobraría nadie por
-atender. Reproducible con `uv run python -m pipeline simulate-policy`.
+El histórico muestra que esperar cuesta: un lead que espera un día conserva el 64 % de su
+probabilidad de cierre, y uno que espera cinco, el 41 %. Con ese decaimiento y la capacidad de hoy
+(70 % de la demanda), atender por calidad más urgencia captura **10,3 cierres más (7,1 %)** que
+atender primero lo más reciente. Frente al orden de llegada la diferencia es mucho mayor, pero se
+debe sobre todo a atender fresco. Reproducible con `uv run python -m pipeline simulate-policy`.
 
 ### Límites que conviene conocer
 
-- Un lead sin conversación de WhatsApp solo puede sumar por el precio del modelo, así que queda
-  en Frío. Son 565 de los 981 leads priorizados: la urgencia es lo que los ordena.
+- 559 de los 981 leads priorizados no tienen conversación de WhatsApp: salen Sin calificar y entre
+  ellos solo los distinguen el precio del modelo y la urgencia.
 - La extracción con IA acierta entre 97,8 % y 99,2 % según la corrida sobre 40 conversaciones
-  revisadas por una persona. El modelo no es determinista ni con temperatura 0.
+  revisadas por una persona. El modelo no es determinista ni con temperatura 0. Una cita que no
+  aparece en lo que escribió el cliente no se muestra.
 - El ajuste por conversación no tiene validación histórica y por eso pesa poco.
 """)
 
