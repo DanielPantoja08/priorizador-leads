@@ -254,6 +254,50 @@ Ninguna cifra de esta documentación se escribió a mano: todas salen de un scri
 
 ---
 
+## Decisiones tomadas
+
+Cada fila dice qué se eligió, qué se descartó y por qué. El detalle está en [docs/TRD.md](docs/TRD.md).
+
+### Datos y base
+
+| Decisión | Alternativa descartada | Por qué |
+|---|---|---|
+| **Supabase (PostgreSQL)**, igual en local (CLI + Docker) y en la nube | SQLite, o Postgres con autenticación y API propias | Trae RLS, autenticación y API REST (PostgREST) sin escribir un backend, y es el mismo motor en los dos entornos |
+| **Separación por empresa con RLS**; la app usa la llave anónima y el JWT del usuario | Filtrar por empresa en la interfaz | Un error en la app no puede mostrar datos de otra empresa: la base no los entrega. Por eso el aislamiento se prueba contra la base |
+| **Duplicados solo dentro de la empresa**, por teléfono y luego por correo | Deduplicar en todo el grupo | Cada comercializadora solo puede ver a sus clientes; un teléfono compartido entre empresas son dos clientes |
+| **Fechas ambiguas `NN/NN` por reglas en orden** (componente > 12, ventana de datos, coherencia con el contacto, y dd/mm por defecto con bandera) | Asumir siempre dd/mm | Resuelve con los datos cuando se puede y deja marcado el caso que no se pudo resolver |
+| **Esquema en migraciones versionadas** | Crear las tablas desde el código | `supabase db push` reproduce la misma base en la nube |
+
+### Priorización
+
+| Decisión | Alternativa descartada | Por qué |
+|---|---|---|
+| **Puntaje aditivo con razones** | Modelo entrenado | El histórico predice poco (una regresión logística llega a AUC 0,548) y cada punto se traduce en una razón que el asesor puede leer |
+| **Validación con corte temporal** (antes y desde el 15 de junio) | Medir sobre los mismos datos con que se eligieron los pesos | Evita que la validación premie un ajuste a esos datos |
+| **Sin los registros «Sin gestión» ni `numero_contactos`** | Usar todo el histórico | Un lead que nadie llamó no dice nada de su calidad, y el número de contactos solo se conoce al final (fuga de información) |
+| **El corte es el último registro del día**, no el reloj | Medir la urgencia contra la hora de ejecución | Dos corridas sobre los mismos datos dan la misma lista |
+| **Reparto en serpentina**, con tope de capacidad y sin cruzar punto de venta | Repartir siempre en el mismo sentido | Así el primer asesor no se queda con todos los mejores leads del día |
+
+### Componente de IA
+
+| Decisión | Alternativa descartada | Por qué |
+|---|---|---|
+| **Gemini `gemini-3.5-flash-lite`** con salida estructurada y esquema Pydantic | Texto libre, o un modelo de pago | Nivel gratuito pensado para volumen; el esquema obliga a respuestas que se pueden validar |
+| **Reglas como respaldo**, detrás de la misma interfaz | Que la corrida falle si el modelo falla | El pipeline programado termina aunque la API no responda, y la corrida declara qué conversaciones resolvió el respaldo |
+| **Caché por contenido, extractor y versión del prompt** | Volver a extraer en cada corrida | La segunda corrida no hace peticiones; cambiar el prompt sube la versión e invalida la caché sin borrarla |
+| **Etiquetas de referencia propuestas por la IA y revisadas por una persona** | Etiquetar a mano las 40 conversaciones | Cabía en el tiempo del ejercicio; se declara siempre así, nunca como etiquetado manual |
+| **Frase de apertura con plantilla** | Generarla con el modelo | No gasta cuota, siempre sale igual y no puede inventar datos |
+
+### Automatización y publicación
+
+| Decisión | Alternativa descartada | Por qué |
+|---|---|---|
+| **Un solo comando** (`pipeline run`) y **GitHub Actions** con cron y disparo manual | Un orquestador aparte (Airflow, un servidor) | Es gratis, vive junto al código y corre el mismo comando que en local |
+| **Streamlit Community Cloud** | Un frontend aparte (React en Vercel) | Todo en Python y publicación directa desde el repositorio |
+| **uv con `uv.lock`**; `app/requirements.txt` exportado desde el lock | `pip` con `requirements.txt` editado a mano | El entorno es el mismo en local, en CI y en la nube |
+
+---
+
 ## Límites conocidos
 
 - **565 de los 981 leads priorizados no tienen conversación de WhatsApp.** Su techo son 2 puntos de
