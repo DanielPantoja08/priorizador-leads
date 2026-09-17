@@ -20,7 +20,8 @@ import pandas as pd
 from pipeline.extract.consolidar import Senales
 
 # Subir cualquier peso obliga a subir esta versión: la tabla `score` guarda una fila por versión.
-VERSION_SCORE = "v1"
+# v2: un lead sin conversación ya no cuenta como «no» en cita, cuota y contado (ver abajo).
+VERSION_SCORE = "v2"
 
 # Componente A (TRD 9.2). Las tasas que los justifican están en docs/EDA.md, sección 4.
 PESOS_CALIDAD = {
@@ -30,6 +31,15 @@ PESOS_CALIDAD = {
     "contado": 1,  # pago de contado: 11,8 % contra 8,4 %
 }
 PRECIO_ALTO = 10_000_000
+
+# Cita, cuota y contado solo se saben si el cliente escribió por WhatsApp. En el histórico esas
+# señales aparecen igual en los tres canales y los canales cierran parecido, así que no tener la
+# conversación es falta de dato, no un «no». Un lead sin conversación suma el valor esperado de
+# las tres, con su frecuencia en el histórico gestionado, redondeado al entero
+# (`pipeline validate-scoring` lo calcula), y su temperatura es «Sin calificar», no Frío.
+PUNTOS_SIN_CONVERSACION = 2
+SENALES_DE_CONVERSACION = ("cita", "cuota", "contado")
+SIN_CALIFICAR = "Sin calificar"
 
 # Componente B. Pesos pequeños a propósito: no tienen respaldo histórico y la app los marca así.
 PESOS_CONVERSACION = {
@@ -117,6 +127,11 @@ def momento_corte(leads: pd.DataFrame, fecha_corte) -> datetime:
 def _calidad(senales: Senales | None, precio_lista: int | None) -> tuple[int, list[dict]]:
     """Componente A: lo que el histórico respalda."""
     razones: list[dict] = []
+    if senales is None:
+        razones.append({
+            "factor": "sin conversación: valor esperado de cita, cuota y contado",
+            "puntos": PUNTOS_SIN_CONVERSACION,
+        })  # fmt: skip
     if senales is not None and senales.pidio_cita:
         razones.append({"factor": "pidió cita", "puntos": PESOS_CALIDAD["cita"]})
     if senales is not None and senales.menciona_cuota == "SI":
@@ -237,7 +252,7 @@ def calcular(
                 puntos_conversacion=ajuste,
                 puntos_urgencia=urgencia,
                 prioridad=calidad + ajuste + urgencia,
-                temperatura=temperatura_de(calidad + ajuste),
+                temperatura=SIN_CALIFICAR if suyas is None else temperatura_de(calidad + ajuste),
                 razones=razones_a + razones_b + razones_c,
                 fecha_registro=fila["fecha_registro"],
                 sin_contacto_reciente=reciente,

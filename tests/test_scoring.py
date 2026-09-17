@@ -1,4 +1,4 @@
-"""Pruebas del puntaje v1 (TRD 9): los tres componentes, la elegibilidad y el orden."""
+"""Pruebas del puntaje v2 (TRD 9): los tres componentes, la elegibilidad y el orden."""
 
 from __future__ import annotations
 
@@ -52,12 +52,22 @@ def test_calidad_suma_los_cuatro_factores() -> None:
     assert p.puntos_calidad == 9  # 3 cita + 3 cuota + 2 precio + 1 contado
 
 
-def test_lead_sin_conversacion_solo_puntua_por_precio() -> None:
-    # Limitación documentada (TRD 9.2): un lead de Meta o Web sin WhatsApp solo puede sumar el
-    # precio del modelo, así que se queda en Frío. La urgencia sigue ordenándolo.
+def test_lead_sin_conversacion_suma_el_valor_esperado_y_queda_sin_calificar() -> None:
+    # v2: sin chat no se sabe si pidió cita, tiene cuota o paga de contado. Eso no es un «no»:
+    # suma el valor esperado de las tres señales (2) y el precio, y no se le pone temperatura.
     p = puntuar([lead("LEAD-1", sku_interes="SKU-CARA")])[0]
-    assert p.puntos_calidad == 2
-    assert p.temperatura == "Frío"
+    assert p.puntos_calidad == 4  # 2 valor esperado + 2 precio
+    assert p.temperatura == "Sin calificar"
+    assert any("valor esperado" in r["factor"] for r in p.razones)
+
+
+def test_sin_conversacion_no_queda_por_debajo_de_un_chat_sin_senales() -> None:
+    # De quien escribió sin dar señales se sabe que no las dio; de quien no escribió, solo el
+    # promedio del histórico.
+    filas = [lead("LEAD-1"), lead("LEAD-2")]
+    orden = puntuar(filas, senales("LEAD-1", cliente_respondio=True))
+    assert [p.lead_id for p in orden] == ["LEAD-2", "LEAD-1"]
+    assert orden[1].temperatura == "Frío"
 
 
 def test_cuota_declarada_pero_sin_cifra_no_suma() -> None:
@@ -128,14 +138,14 @@ def test_cortes_de_temperatura(puntos: int, esperado: str) -> None:
 
 def test_temperatura_no_incluye_la_urgencia() -> None:
     # Un lead recién registrado suma 5 de urgencia, pero eso no lo vuelve Caliente (TRD 9.2).
-    p = puntuar([lead("LEAD-1")])[0]
+    p = puntuar([lead("LEAD-1")], senales(cliente_respondio=True))[0]
     assert p.puntos_urgencia == 5
     assert p.prioridad == 5
     assert p.temperatura == "Frío"
 
 
 def test_prioritario_por_urgencia_aunque_sea_frio() -> None:
-    p = puntuar([lead("LEAD-1")])[0]
+    p = puntuar([lead("LEAD-1")], senales(cliente_respondio=True))[0]
     assert p.temperatura == "Frío"
     assert p.prioritario is True  # sin contacto y con menos de 24 h
 
