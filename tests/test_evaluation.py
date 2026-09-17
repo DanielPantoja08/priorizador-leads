@@ -11,6 +11,7 @@ import pytest
 from evaluation.eval_extraction import cargar_referencia, coincide, evaluar, tabla_markdown
 from evaluation.validate_scoring import (
     coma,
+    estados_incoherentes,
     intervalo_razon,
     preparar,
     razon_caliente_frio,
@@ -190,3 +191,19 @@ def test_los_puntos_sin_conversacion_son_el_valor_esperado_del_historico() -> No
     # Si cambia el histórico o un peso, la constante del puntaje tiene que cambiar con él.
     historico = preparar(normalizar_historico(leer_csv("historico_cierres.csv")))
     assert round(valor_esperado_sin_conversacion(historico)) == PUNTOS_SIN_CONVERSACION
+
+
+def test_en_el_historico_ningun_estado_sin_puntos_cierra_mas_que_uno_con_puntos() -> None:
+    historico = preparar(normalizar_historico(leer_csv("historico_cierres.csv")))
+    assert estados_incoherentes(historico) == []
+
+
+def test_se_detecta_un_estado_sin_puntos_que_cierra_mas() -> None:
+    # Crédito cerrando 50 % y contado 0 %: dar el punto a contado sería incoherente.
+    df = pd.DataFrame({
+        "pidio_cita": [True, False],
+        "manifesto_cuota_inicial": ["SI", "NO"],
+        "forma_pago_declarada": ["contado", "credito"],
+        "cerrado": [0, 1],
+    })  # fmt: skip
+    assert "contado" in estados_incoherentes(df)

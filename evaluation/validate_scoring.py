@@ -36,6 +36,7 @@ from pipeline.ingest import leer_csv  # noqa: E402
 from pipeline.normalize import normalizar_historico  # noqa: E402
 from pipeline.scoring import (  # noqa: E402
     CORTE_TEMPORAL,
+    ESTADOS_QUE_PUNTUAN,
     PESOS_CALIDAD,
     PRECIO_ALTO,
     PUNTOS_SIN_CONVERSACION,
@@ -52,6 +53,12 @@ SIN_GESTION = "Sin gestión"
 # Semilla fija: el informe tiene que dar lo mismo en cada corrida.
 REMUESTREOS = 5000
 SEMILLA = 2026
+# Columna del histórico que corresponde a cada señal que puntúa por estado.
+COLUMNA_DE_SENAL = {
+    "cita": "pidio_cita",
+    "cuota": "manifesto_cuota_inicial",
+    "contado": "forma_pago_declarada",
+}
 
 
 def preparar(historico: pd.DataFrame) -> pd.DataFrame:
@@ -143,13 +150,43 @@ def auc_pesos_de_entrenamiento(entrenamiento: pd.DataFrame, prueba: pd.DataFrame
 
 
 def senales(df: pd.DataFrame) -> pd.DataFrame:
-    """Las cuatro señales del componente A como columnas 0/1."""
-    return pd.DataFrame({
-        "cita": df["pidio_cita"].astype(int),
-        "cuota": df["manifesto_cuota_inicial"].eq("SI").astype(int),
-        "precio_alto": df["precio_lista"].ge(PRECIO_ALTO).astype(int),
-        "contado": df["forma_pago_declarada"].eq("contado").astype(int),
-    })  # fmt: skip
+    """Las cuatro señales del componente A como columnas 0/1: 1 si el estado puntúa."""
+    return pd.DataFrame(
+        {
+            clave: df[columna].isin(ESTADOS_QUE_PUNTUAN[clave]).astype(int)
+            for clave, columna in COLUMNA_DE_SENAL.items()
+        }
+        | {"precio_alto": df["precio_lista"].ge(PRECIO_ALTO).astype(int)}
+    )
+
+
+def tabla_estados(df: pd.DataFrame) -> str:
+    """Tasa de cierre de cada estado de cada señal, con los puntos que recibe."""
+    lineas = [
+        "| Señal | Estado | Puntos | Cierre (todo) | n | Cierre (entrenamiento) | Cierre (prueba) |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for clave, columna in COLUMNA_DE_SENAL.items():
+        for estado, grupo in df.groupby(columna):
+            puntos = PESOS_CALIDAD[clave] if estado in ESTADOS_QUE_PUNTUAN[clave] else 0
+            lineas.append(
+                f"| {clave} | {estado} | {puntos} | {coma(tasa(grupo)[1] * 100, 1)} % | {len(grupo)} "
+                f"| {coma(tasa(grupo[~grupo['prueba']])[1] * 100, 1)} % "
+                f"| {coma(tasa(grupo[grupo['prueba']])[1] * 100, 1)} % |"
+            )
+    return "\n".join(lineas)
+
+
+def estados_incoherentes(df: pd.DataFrame) -> list[str]:
+    """Señales donde un estado sin puntos cierra más que uno con puntos, en todo el histórico."""
+    malas = []
+    for clave, columna in COLUMNA_DE_SENAL.items():
+        tasas = df.groupby(columna)["cerrado"].mean()
+        con = [t for estado, t in tasas.items() if estado in ESTADOS_QUE_PUNTUAN[clave]]
+        sin = [t for estado, t in tasas.items() if estado not in ESTADOS_QUE_PUNTUAN[clave]]
+        if con and sin and max(sin) > min(con):
+            malas.append(clave)
+    return malas
 
 
 def valor_esperado_sin_conversacion(df: pd.DataFrame) -> float:
@@ -190,6 +227,19 @@ def main() -> int:
         f"({detalle}); el puntaje usa {PUNTOS_SIN_CONVERSACION}."
     )
 
+    print("\nCada estado de cada señal, con los puntos que recibe:\n")
+    print(tabla_estados(df))
+    incoherentes = estados_incoherentes(df)
+    print(
+        "\nCoherencia: ningún estado sin puntos cierra más que uno con puntos."
+        if not incoherentes
+        else f"\n**Incoherente:** {', '.join(incoherentes)} tiene un estado sin puntos que cierra más."
+    )
+    print(
+        "Los estados se asignaron mirando todo el histórico, ventana de prueba incluida: "
+        "la columna de prueba no es independiente de esa decisión."
+    )
+
     razon = razon_caliente_frio(prueba)
     bajo, alto = intervalo_razon(prueba)
     cumple = razon >= RAZON_MINIMA_CALIENTE_FRIO
@@ -210,7 +260,7 @@ def main() -> int:
         "\nLimitación: los pesos se eligieron con todo el histórico, ventana de prueba incluida; "
         "la validación temporal es parcial."
     )
-    return 0 if cumple else 1
+    return 0 if cumple and not incoherentes else 1
 
 
 if __name__ == "__main__":
