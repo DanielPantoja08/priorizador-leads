@@ -22,7 +22,11 @@ CAMPOS_QUE_CITAN_AL_ASESOR = frozenset({"cliente_respondio"})
 # la línea entera. Ese encabezado no es parte de la cita.
 ENCABEZADO = re.compile(r"^\s*(cliente|asesor)\s*\[[^\]]*\]\s*:\s*", re.IGNORECASE)
 
-# Parecido mínimo (0 a 1) para aceptar una cita copiada con una errata.
+# Parecido mínimo (0 a 1) para aceptar una cita copiada con una errata. Deja pasar una o dos letras
+# cambiadas, no una paráfrasis. Es a propósito: la app muestra la evidencia como cita textual, y
+# decidir si otras palabras dicen lo mismo es un juicio de significado, el mismo que hace el modelo
+# y que aquí se quiere comprobar. Rechazar una paráfrasis cuesta poco (el campo pasa a desconocido);
+# aceptar una cita inventada haría pasar por dicho algo que el cliente no dijo.
 SIMILITUD_MINIMA = 0.9
 
 
