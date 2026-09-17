@@ -144,7 +144,7 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
   - La contraseña de demostración no se teclea en el navegador.
 - **Revisión contra el enunciado**: `docs/arquitectura.md`, README con supuestos y API, 40 asesores
   y 3 gerentes, frase de apertura sin LLM, `simulate-policy` (70 %: +9 cierres, +6,2 %). 298 pruebas.
-- `eval-robustness`: 97 frases fijas; reformuladas, reglas 99,4 → 87,2 %, Gemini 97,5–98,6 %. Falta revisión humana.
+- `eval-robustness`: 97 frases fijas; reformuladas, reglas 99,4 → 87,2 %, Gemini 97,5–98,6 %. Revisadas por una persona.
 - **Fase F**: repo público, Supabase remoto (sa-east-1, session pooler 5432), workflow verde a mano y
   https://priorizador-leads.streamlit.app con aislamiento verificado. Credenciales en `.env.remoto`
   (ignorado). `setup-uv` sin etiqueta mayor: versión exacta. Falta: cron verde y presentación.

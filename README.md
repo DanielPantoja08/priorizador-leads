@@ -161,9 +161,9 @@ Gemini no usó el respaldo por reglas en ninguna de las corridas.
 que no repiten 97 frases, no. Por eso la extracción la hace el modelo, y las reglas quedan como
 respaldo y como línea base.
 
-Límites de esta prueba: **las reformulaciones las propuso la IA y están pendientes de revisión**
-(`evaluation/reformulaciones.json`, `"revisado": false`), así que las cifras son preliminares; y es
-una sola redacción por frase, así que mide fragilidad, no la exactitud esperada en producción.
+Límites de esta prueba: **las reformulaciones las propuso la IA y las revisó una persona**
+(`evaluation/reformulaciones.json`), así se declara siempre; y es una sola redacción por frase, así
+que mide fragilidad, no la exactitud esperada en producción.
 
 ---
 
