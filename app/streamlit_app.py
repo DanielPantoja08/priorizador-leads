@@ -9,12 +9,21 @@ tuviera un error de filtrado, la base seguiría sin devolver filas de otra empre
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Callable
 from datetime import date, datetime
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
 from supabase import Client, create_client
+
+# Streamlit agrega al path la carpeta de este archivo, no la raíz del repositorio.
+RAIZ = Path(__file__).resolve().parent.parent
+if str(RAIZ) not in sys.path:
+    sys.path.insert(0, str(RAIZ))
+
+from pipeline.extract.evidencia import campos_sin_respaldo  # noqa: E402  (solo biblioteca estándar)
 
 TITULO = "Priorizador Diario de Leads"
 
@@ -146,6 +155,30 @@ def evidencia_de(sb: Client, ids: list[str], prompt_version: str | None) -> list
         .execute()
     )
     return filas.data
+
+
+def lineas_de_evidencia(fila: dict, mensajes: pd.DataFrame) -> list[str]:
+    """La evidencia de una conversación, lista para mostrar.
+
+    Solo se cita entre comillas lo que el cliente escribió de verdad en esa conversación. Un
+    fragmento que no aparece (inventado, dicho por el asesor o de otro chat) se avisa sin citarlo.
+    """
+    evidencia = fila.get("evidencia") or {}
+    textos = []
+    if not mensajes.empty:
+        del_cliente = mensajes[
+            (mensajes["conversacion_id"] == fila["conversacion_id"])
+            & (mensajes["emisor"] == "cliente")
+        ]
+        textos = list(del_cliente["texto"])
+    sin_respaldo = set(campos_sin_respaldo(evidencia, textos))
+    return [
+        f"- `{campo}`: *no aparece en lo que escribió el cliente; no se cita*"
+        if campo in sin_respaldo
+        else f"- `{campo}`: «{fragmento}»"
+        for campo, fragmento in evidencia.items()
+        if fragmento
+    ]
 
 
 def otros_leads_de(sb: Client, cliente_id: str, lead_id: str) -> pd.DataFrame:
@@ -338,8 +371,8 @@ def detalle(sb: Client, lead: dict, corte: date) -> None:
 
     ids = lead.get("ia_conversacion_ids") or []
     if ids:
+        mensajes = conversacion_de(sb, ids)
         with st.expander(f"Conversación completa ({len(ids)})"):
-            mensajes = conversacion_de(sb, ids)
             for _, m in mensajes.iterrows():
                 quien = "🧑 Cliente" if m["emisor"] == "cliente" else "💬 Asesor"
                 st.markdown(f"**{quien}** · {m['hora']}  \n{m['texto']}")
@@ -348,8 +381,8 @@ def detalle(sb: Client, lead: dict, corte: date) -> None:
                 st.caption(
                     f"{fila['conversacion_id']} · {fila['extractor']} {fila['prompt_version']}"
                 )
-                for campo, fragmento in (fila.get("evidencia") or {}).items():
-                    st.markdown(f"- `{campo}`: «{fragmento}»")
+                for linea in lineas_de_evidencia(fila, mensajes):
+                    st.markdown(linea)
 
 
 # --------------------------------------------------------------------------------------
