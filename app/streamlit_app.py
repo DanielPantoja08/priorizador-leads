@@ -544,16 +544,19 @@ La prioridad es la suma de tres componentes, y cada lead muestra los factores qu
 
 **A. Calidad (0 a 9)** — respaldada por el histórico de 2.021 leads gestionados:
 
-| Factor | Cierra si se cumple | Si no | Puntos |
-|---|---|---|---|
-| Pidió cita | 11,8 % | 8,9 % | +3 |
-| Manifestó cuota inicial | 11,8 % | 8,3 % | +3 |
-| Modelo de $10 M o más | 11,5 % | 8,5 % | +2 |
-| Pago de contado | 11,8 % | 8,4 % | +1 |
+Cada estado de una señal vale lo que dice el histórico de ese estado:
 
-Cita, cuota y contado solo se conocen si el cliente escribió por WhatsApp. Un lead **sin
-conversación** no cuenta como un «no»: suma +2, lo que valen en promedio esas tres señales en el
+| Señal | Estado | Cierra | Puntos |
+|---|---|---|---|
+| Pidió cita | sí / no | 11,8 % / 8,9 % | +3 / 0 |
+| Cuota inicial | sí / no / no informa | 11,8 % / 8,7 % / 7,8 % | +3 / 0 / 0 |
+| Forma de pago | contado / no informa / crédito | 11,8 % / 12,3 % / 8,4 % | +1 / +1 / 0 |
+| Modelo | $10 M o más / menos | 11,5 % / 8,5 % | +2 / 0 |
+
+Cita, cuota y forma de pago solo se conocen si el cliente escribió por WhatsApp. Un lead **sin
+conversación** no cuenta como un «no»: suma +2, lo que valen en promedio esas señales en el
 histórico, más el precio del modelo, y su temperatura es **Sin calificar**. Califíquelo en la llamada.
+Si el extractor afirma algo que no aparece en el chat, ese dato se toma como desconocido y no puntúa.
 
 **B. Ajuste por conversación (−3 a +3)** — **heurístico**: el histórico no contiene estas señales,
 así que sus pesos no están validados. Intención alta +2, baja −2; objeción de centrales o sin
@@ -571,22 +574,23 @@ Validación con corte temporal (entrenamiento antes del 15 de junio de 2026, pru
 
 | Temperatura | Cierre en la ventana de prueba | IC 95 % | Cierres / n |
 |---|---|---|---|
-| Caliente | 15,7 % | 9,4 – 25,0 % | 13 / 83 |
-| Tibio | 11,1 % | 7,9 – 15,4 % | 30 / 271 |
-| Frío | 7,2 % | 4,5 – 11,4 % | 16 / 221 |
+| Caliente | 18,1 % | 11,9 – 26,5 % | 19 / 105 |
+| Tibio | 9,9 % | 6,8 – 14,1 % | 26 / 263 |
+| Frío | 6,8 % | 4,1 – 11,0 % | 14 / 207 |
 
-Un Caliente cierra **2,16 veces** más que un Frío, con un intervalo de 1,01 a 4,36. El criterio
+Un Caliente cierra **2,68 veces** más que un Frío, con un intervalo de 1,43 a 5,48. El criterio
 de aceptación (1,8) cae dentro: es un **indicio de separación**, no una prueba. Y la validación es
-parcial, porque los pesos se eligieron mirando todo el histórico. El AUC es 0,602: el puntaje
-**ordena**, no predice con certeza. Reproducible con `uv run python -m pipeline validate-scoring`.
+parcial, porque los pesos y los estados se eligieron mirando todo el histórico. El AUC es 0,618: el
+puntaje **ordena**, no predice con certeza. Reproducible con `uv run python -m pipeline validate-scoring`.
 
 ### Qué significa en ventas
 
-El histórico muestra que esperar cuesta: un lead que espera un día conserva el 64 % de su
-probabilidad de cierre, y uno que espera cinco, el 41 %. Con ese decaimiento y la capacidad de hoy
-(70 % de la demanda), atender por calidad más urgencia captura **10,3 cierres más (7,1 %)** que
-atender primero lo más reciente. Frente al orden de llegada la diferencia es mucho mayor, pero se
-debe sobre todo a atender fresco. Reproducible con `uv run python -m pipeline simulate-policy`.
+Quien recibe respuesta en menos de 24 h cierra más, pero no se sabe cuánto de eso causa la espera
+y cuánto se debe a que se contesta antes a los mejores leads. Por eso la simulación se corre con
+tres supuestos, de que la espera no cause nada a que cause toda la diferencia. En los tres, con la
+capacidad de hoy (70 % de la demanda), atender por calidad más urgencia captura **entre 15 y 17
+cierres más (10–11 %)** que atender primero lo más reciente. Reproducible con
+`uv run python -m pipeline simulate-policy`.
 
 ### Límites que conviene conocer
 
@@ -594,7 +598,7 @@ debe sobre todo a atender fresco. Reproducible con `uv run python -m pipeline si
   ellos solo los distinguen el precio del modelo y la urgencia.
 - La extracción con IA acierta entre 97,8 % y 99,2 % según la corrida sobre 40 conversaciones
   revisadas por una persona. El modelo no es determinista ni con temperatura 0. Una cita que no
-  aparece en lo que escribió el cliente no se muestra.
+  aparece en la conversación no se muestra ni puntúa.
 - El ajuste por conversación no tiene validación histórica y por eso pesa poco.
 """)
 
