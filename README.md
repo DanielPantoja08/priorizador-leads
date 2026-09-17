@@ -275,10 +275,11 @@ mostrar con cualquier asesor y no solo con uno. La contraseña es la de `DEMO_PA
 comparte fuera del repositorio.
 
 Antes de cada commit: `uv run ruff check .`, `uv run ruff format .` y `uv run pytest -q`
-(**328 pruebas**; ninguna llama a servicios externos). Las 23 de `test_aislamiento.py` y
-`test_interfaz.py` usan el Supabase local y se omiten solas si no está en ejecución. La de interfaz
-pide los leads con las
-mismas funciones de la app y la ejecuta con `AppTest`: inicia sesión como asesor y abre el detalle de
+(**334 pruebas**; ninguna llama a servicios externos). Las 28 de `test_aislamiento.py`,
+`test_interfaz.py` y `test_version_score.py` usan el Supabase local y se omiten solas si no está en
+ejecución; la última comprueba, en una transacción que se deshace, que la vista elige `v10` antes
+que `v2` (la versión se ordena por `score.version_numero`, no como texto). La de interfaz pide los
+leads con las mismas funciones de la app y la ejecuta con `AppTest`: inicia sesión como asesor y abre el detalle de
 todos sus leads.
 
 ### Despliegue

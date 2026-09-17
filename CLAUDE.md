@@ -137,12 +137,12 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
 - **Revisión contra el enunciado**: `docs/arquitectura.md`, README con supuestos y API, 40 asesores
   y 3 gerentes, frase de apertura sin LLM. `eval-robustness`: 97 frases fijas; reformuladas, reglas
   99,4 → 87,2 %, Gemini 97,5–98,6 % (revisadas por una persona).
-- **Fase F**: repo público, Supabase remoto (sa-east-1, session pooler 5432) y
-  https://priorizador-leads.streamlit.app. Credenciales en `.env.remoto` (ignorado). `setup-uv` con
-  versión exacta. Falta: cron verde y presentación.
-- **Revisión de fallas externas (2026-09-17)**, aplicada en local y remoto. 328 pruebas:
+- **Fase F**: repo público, Supabase remoto (sa-east-1, pooler 5432), app en Streamlit Cloud.
+  Credenciales en `.env.remoto` (ignorado). `setup-uv` exacto. Falta: cron verde y presentación.
+- **Revisión de fallas externas (2026-09-17)**, aplicada en local y remoto. 334 pruebas:
   - Puntaje **v2**: sin conversación suma `PUNTOS_SIN_CONVERSACION` (valor esperado 2,27 → 2) y
-    es «Sin calificar». Remoto: 142 Caliente, 59 Tibio, 221 Frío, 559 Sin calificar.
+    es «Sin calificar». Remoto: 142 Caliente, 59 Tibio, 221 Frío, 559 Sin calificar. La versión
+    se ordena por `score.version_numero` (generada; check `^v[1-9][0-9]*$`), nunca como texto.
   - Validación **parcial** (pesos vistos en la prueba); razón 2,16 con IC 1,01–4,36: «indicio».
   - `simulate-policy` con decaimiento: A + urgencia +7,1 % sobre «más reciente primero» (70 %).
   - Evidencia del LLM comprobada contra el cliente (`extract/evidencia.py`): 10 sin respaldo.
