@@ -108,6 +108,14 @@ def main() -> None:
     comandos.add_parser(
         "simulate-policy", help="mide cuántos cierres más captura priorizar (TRD 9.3)"
     )
+    robustez = comandos.add_parser(
+        "eval-robustness", help="evalúa la extracción con las frases reformuladas (TRD 8.5)"
+    )
+    robustez.add_argument(
+        "--con-gemini",
+        action="store_true",
+        help="además de las reglas, mide Gemini (consume cuota)",
+    )
     args = parser.parse_args()
 
     if args.comando == "run":
@@ -124,6 +132,11 @@ def main() -> None:
         from evaluation.simular_politica import main as simular
 
         sys.exit(simular())
+
+    if args.comando == "eval-robustness":
+        from evaluation.robustez import main as evaluar_robustez
+
+        sys.exit(evaluar_robustez(con_gemini=args.con_gemini))
 
     # eval: compara los extractores contra el conjunto de referencia revisado (TRD 8.5).
     from evaluation.eval_extraction import main as evaluar_extraccion
