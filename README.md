@@ -35,9 +35,9 @@ Un solo comando ejecuta todo: `uv run python -m pipeline run`.
 | Conversaciones | 677 chats · 4.310 mensajes |
 | Extracción con IA | 677 conversaciones en **68 peticiones**, 8,4 min. La segunda corrida reusa la caché: **0 peticiones y 3 s** |
 | Señales consolidadas | 628 leads |
-| Puntaje (v2) | 981 leads elegibles: 142 Caliente, 58 Tibio, 222 Frío y 559 Sin calificar |
+| Puntaje (v3) | 981 leads elegibles: 142 Caliente, 60 Tibio, 220 Frío y 559 Sin calificar |
 | Asignación | 637 asignados y 344 sin cupo, sobre una capacidad de 694 |
-| Evidencia de la IA | 10 fragmentos citados que no aparecen en lo que escribió el cliente: se registran y no se muestran como cita |
+| Evidencia de la IA | 4 campos con una cita que no aparece en la conversación: se toman como desconocidos, se registran y no se citan |
 
 La corrida es **idempotente**: repetirla con los mismos insumos deja las tablas byte a byte iguales
 (verificado comparando huellas md5 de `senales_lead`, `score` y `asignacion`).
@@ -51,14 +51,23 @@ Se eligió un puntaje aditivo y no un modelo entrenado porque el histórico tien
 predictivo (una regresión logística llega a AUC 0,548) y porque los puntos se traducen
 directamente en razones que el asesor puede leer.
 
-**A. Calidad (0 a 9)** — derivada de las tasas de cierre de 2.021 leads gestionados:
-pidió cita `+3`, manifestó cuota inicial `+3`, modelo de $10 M o más `+2`, pago de contado `+1`.
+**A. Calidad (0 a 9)** — derivada de las tasas de cierre de 2.021 leads gestionados: pidió cita
+`+3`, manifestó cuota inicial `+3`, modelo de $10 M o más `+2`, forma de pago `+1`.
 
-Cita, cuota y contado solo se conocen si el cliente escribió por WhatsApp. **Un lead sin
-conversación no cuenta como un «no»** (puntaje v2): en el histórico esas señales aparecen igual en
-los tres canales, así que suma su valor esperado —2,27 puntos, redondeado a `+2`: cita en el
-29,4 % de los casos, cuota en el 40,7 % y contado en el 17,2 %— más el precio del modelo. En v1
-valían 0 y el 79 % de la lista salía Frío por falta de dato, no por baja calidad.
+**Cada estado de una señal vale lo que dice el histórico de ese estado** (puntaje v3), no «sí»
+contra «todo lo demás». Con la cuota, «no informa» cierra 7,8 %, por debajo de «no» (8,7 %): suma
+0. Con la forma de pago, «no informa» cierra 12,3 %, igual que contado (11,8 %) y por encima de
+crédito (8,4 %): suma `+1`, como contado. `validate-scoring` comprueba que ningún estado sin puntos
+cierre más que uno con puntos.
+
+La misma regla cubre lo que no se sabe:
+
+- **Sin conversación** no hay estado que mirar: el lead suma el valor esperado de las tres señales
+  del chat, 2,47 puntos redondeado a `+2` (cita en el 29,4 % del histórico, cuota en el 40,7 % y
+  forma de pago que puntúa en el 36,9 %), más el precio del modelo, y queda **«Sin calificar»**.
+- **Con conversación, un campo cuya cita no aparece en el chat** se toma como desconocido: vuelve a
+  su valor neutro (cuota «no informa», intención media, sin objeción...) y puntúa como tal. La razón
+  queda en la lista del lead con 0 puntos.
 
 **B. Ajuste por conversación (−3 a +3)** — **heurístico y así se declara**: el histórico no contiene
 estas señales. Intención alta `+2` / baja `−2`, objeción de centrales o sin inicial `−1`, el cliente
@@ -74,21 +83,23 @@ averiguar en la llamada lo que el puntaje no sabe.
 ### Validación contra el histórico (`uv run python -m pipeline validate-scoring`)
 
 Corte temporal: antes del 15 de junio de 2026 es entrenamiento y desde esa fecha, prueba. **La
-validación es parcial:** los pesos se eligieron con las tasas de todo el histórico, ventana de prueba
-incluida, así que esa ventana no es una muestra que el puntaje no haya visto. Se probó derivarlos
-solo del entrenamiento (regresión logística con las mismas cuatro señales) y ordena peor en la
-prueba (AUC 0,583 contra 0,602), así que se mantienen.
+validación es parcial:** los pesos y los estados que puntúan se eligieron con las tasas de todo el
+histórico, ventana de prueba incluida, así que esa ventana no es una muestra que el puntaje no haya
+visto. En el entrenamiento solo, la forma de pago «no informa» cierra 11,1 %, entre crédito (8,3 %)
+y contado (12,3 %): la asignación se sostiene con menos margen. Unos pesos derivados solo del
+entrenamiento (regresión logística con las mismas señales) ordenan casi igual (AUC 0,616).
 
 | Temperatura | Cierre en la ventana de prueba | IC 95 % (Wilson) | Cierres / n |
 |---|---|---|---|
-| Caliente | 15,7 % | 9,4 – 25,0 % | 13 / 83 |
-| Tibio | 11,1 % | 7,9 – 15,4 % | 30 / 271 |
-| Frío | 7,2 % | 4,5 – 11,4 % | 16 / 221 |
+| Caliente | 18,1 % | 11,9 – 26,5 % | 19 / 105 |
+| Tibio | 9,9 % | 6,8 – 14,1 % | 26 / 263 |
+| Frío | 6,8 % | 4,1 – 11,0 % | 14 / 207 |
 
-Un Caliente cierra **2,16 veces** más que un Frío, con un intervalo al 95 % (bootstrap) de **1,01 a
-4,36**. El criterio de aceptación era 1,8 y queda dentro del intervalo: es un **indicio de
-separación, no un criterio demostrado**, con 29 cierres entre los dos grupos. El AUC es 0,577 en
-entrenamiento y 0,602 en prueba: **el puntaje ordena, no predice con certeza.**
+Un Caliente cierra **2,68 veces** más que un Frío, con un intervalo al 95 % (bootstrap) de **1,43 a
+5,48**. El criterio de aceptación era 1,8 y queda dentro del intervalo: es un **indicio de
+separación, no un criterio demostrado**, con 33 cierres entre los dos grupos. El AUC es 0,579 en
+entrenamiento y 0,618 en prueba: **el puntaje ordena, no predice con certeza.** (Con v1 eran 2,16
+veces y AUC 0,602; `docs/EDA.md` conserva v1 porque es lo que citan el PRD y el TRD.)
 
 ### Cuántos cierres más son (`uv run python -m pipeline simulate-policy`)
 
@@ -96,43 +107,46 @@ El AUC dice que el puntaje ordena; esto dice qué significa eso en ventas. Sobre
 se simulan las políticas bajo la misma capacidad diaria y se cuentan los cierres que alcanzan a
 entrar en el cupo. Se corre en dos escenarios, porque el supuesto pesa más que la política.
 
-**Sin decaimiento:** el desenlace es propiedad del lead; si no entra en el cupo del día, se pierde.
+**Sin espera:** el desenlace es propiedad del lead; si no entra en el cupo del día, se pierde.
 
 | Capacidad diaria | Orden de llegada | Al azar | **Priorizado** | Ganancia |
 |---|---|---|---|---|
-| 50 % de la demanda | 102 | 102,6 | **122** | +20 (19,6 %) |
-| 70 % de la demanda | 145 | 145,3 | **154** | +9 (6,2 %) |
-| 90 % de la demanda | 185 | 183,5 | **187** | +2 (1,1 %) |
+| 50 % de la demanda | 102 | 102,6 | **120** | +18 (17,6 %) |
+| 70 % de la demanda | 145 | 145,3 | **156** | +11 (7,6 %) |
+| 90 % de la demanda | 185 | 183,5 | **188** | +3 (1,6 %) |
 | 100 % de la demanda | 197 | 197,0 | **197** | +0 (0,0 %) |
 
-Hoy hay 694 cupos para 981 leads elegibles, o sea el 71 % de la demanda. Ahí priorizar captura
-**9 cierres más** que el orden de llegada en los cinco meses del histórico, un 6,2 %.
-
-Lo que más importa de esta tabla no es el número sino la forma: **la ganancia depende de cuán
-escaso sea el cupo.** Con capacidad para todos ninguna política gana, porque no sobra nadie por
-atender; con capacidad para la mitad, la ventaja sube al 19,6 %. Priorizar paga cuando hay que
-dejar gente sin llamar, que es justamente el problema que describe el gerente.
-
 La columna «al azar» es el control: el promedio de 200 barajadas con semilla fija. Queda pegada a
-la del orden de llegada, que es lo que debe pasar si el orden actual no aporta información.
+la del orden de llegada, que es lo que debe pasar si el orden actual no aporta información. **La
+ganancia depende de cuán escaso sea el cupo**: con capacidad para todos ninguna política gana.
 
-**Con decaimiento por espera:** el histórico contradice el supuesto anterior. Lo que no cabe hoy
-pasa a mañana, y cada día de espera conserva solo parte de la probabilidad de cierre: la tasa con
-esa espera sobre la tasa con menos de 24 h (1 día → 64 %, 3 días → 56 %, 5 días → 41 %; después
-se pierde). La política completa suma la urgencia del componente C con el mismo código del puntaje:
+**Con espera:** lo que no cabe hoy pasa a mañana, y a los 5 días se pierde. Este escenario tiene dos
+cuidados que el anterior no necesita:
 
-| Capacidad diaria | Orden de llegada | Más reciente primero | Solo calidad (A) | **Calidad + urgencia** | Ganancia sobre el más reciente |
+1. **Es simétrico.** No usa el desenlace de cada lead, que ya trae incorporada la espera que tuvo.
+   Cada lead tiene una probabilidad base según su temperatura, calibrada para que con las esperas
+   reales reproduzca los cierres observados, y la espera la reduce. Atender rápido a un lead que en
+   la realidad no cerró también suma.
+2. **El efecto de la espera es observacional.** Quien recibe respuesta en menos de 24 h cierra más
+   (un día de espera: 64 % de la tasa; cinco: 41 %), pero quizá porque se contesta antes a los
+   mejores leads. Se reporta con tres supuestos: nada de esa diferencia es causada por la espera
+   (0 %), la mitad (50 %) o toda (100 %).
+
+Con la capacidad de hoy (70 % de la demanda), en cierres esperados:
+
+| Efecto causal de la espera | Orden de llegada | Más reciente primero | Solo calidad (A) | **Calidad + urgencia** | Ganancia sobre el más reciente |
 |---|---|---|---|---|---|
-| 50 % de la demanda | 39,8 | 102,0 | 103,9 | **122,6** | +20,6 (20,2 %) |
-| 70 % de la demanda | 63,6 | 145,0 | 150,7 | **155,3** | +10,3 (7,1 %) |
-| 90 % de la demanda | 98,7 | 185,0 | 181,4 | **187,0** | +2,0 (1,1 %) |
-| 100 % de la demanda | 197,0 | 197,0 | 197,0 | **197,0** | +0,0 (0,0 %) |
+| 0 % | 144,3 | 144,2 | 160,0 | **159,4** | +15,2 (10,6 %) |
+| 50 % | 112,6 | 156,5 | 169,9 | **172,5** | +16,1 (10,3 %) |
+| 100 % | 75,0 | 171,1 | 181,7 | **188,1** | +17,0 (9,9 %) |
 
-Cómo se lee: contra el orden de llegada con pendientes la diferencia es enorme, pero **casi toda se
-debe a atender fresco**, no al puntaje: ese orden atiende siempre lo más viejo. La comparación justa
-es contra «lo más reciente primero», y ahí la política completa suma **10,3 cierres (7,1 %)** con la
-capacidad de hoy. La calidad sola no alcanza: al 90 % queda por debajo, porque demora leads frescos
-por atender buenos leads que ya se enfriaron. Por eso la urgencia forma parte de la prioridad.
+Cómo se lee: la distancia contra el orden de llegada depende casi entera del supuesto causal, así
+que no se defiende. Lo que **no depende del supuesto** es la última columna: frente a atender lo más
+reciente, la política completa suma **entre 15 y 17 cierres (10–11 %)** en los cinco meses del
+histórico. Con efecto causal total, la calidad sola queda por debajo de lo más reciente al 90 % de
+capacidad; por eso la urgencia forma parte de la prioridad. La tabla completa, con las cuatro
+capacidades, la imprime el comando. La probabilidad base es por temperatura, así que subestima lo
+que aporta ordenar dentro de una misma temperatura.
 
 El histórico no trae hora dentro del día: la llegada se aproxima con el `lead_id`, que es
 correlativo, y un lead del día se toma a las 12 h de espera. El tablero muestra el indicador que
@@ -208,10 +222,11 @@ que mide fragilidad, no la exactitud esperada en producción.
   Un error de filtrado en la interfaz no expondría datos de otra empresa.
 - `authenticated` **solo lee**: no hay políticas de `insert`, `update` ni `delete`.
 - Las vistas se crean con `security_invoker = true`; sin esa opción una vista ignora RLS.
-- Un asesor ve **solo los datos de sus clientes asignados**, también consultando la API directamente:
-  leads (incluidos otros canales del mismo cliente), clientes, conversaciones, mensajes,
-  extracciones, puntajes y señales. El histórico y los problemas de calidad son del gerente, que ve
-  toda su empresa.
+- Un asesor ve **solo los datos de sus clientes asignados en la última fecha de corte**, también
+  consultando la API directamente: leads (incluidos otros canales del mismo cliente), clientes,
+  conversaciones, mensajes, extracciones, puntajes y señales. Si mañana un cliente pasa a otro
+  asesor, el anterior deja de verlo. El histórico y los problemas de calidad son del gerente, que
+  ve toda su empresa y todas las fechas.
 - Las conversaciones huérfanas (sin empresa) no son visibles para nadie.
 - La llave `service_role` se usa **únicamente** en `scripts/crear_usuarios_demo.py`, nunca en la app.
 - `.env` y `.streamlit/secrets.toml` están fuera del repositorio; solo se versionan los `.example`.
@@ -275,10 +290,12 @@ mostrar con cualquier asesor y no solo con uno. La contraseña es la de `DEMO_PA
 comparte fuera del repositorio.
 
 Antes de cada commit: `uv run ruff check .`, `uv run ruff format .` y `uv run pytest -q`
-(**334 pruebas**; ninguna llama a servicios externos). Las 28 de `test_aislamiento.py`,
-`test_interfaz.py` y `test_version_score.py` usan el Supabase local y se omiten solas si no está en
-ejecución; la última comprueba, en una transacción que se deshace, que la vista elige `v10` antes
-que `v2` (la versión se ordena por `score.version_numero`, no como texto). La de interfaz pide los
+(**360 pruebas**; ninguna llama a servicios externos). Las 31 de `test_aislamiento.py`,
+`test_interfaz.py`, `test_version_score.py` y `test_rls_fechas.py` usan el Supabase local y se
+omiten solas si no está en ejecución. Las dos últimas trabajan en una transacción que se deshace:
+una comprueba que la vista elige `v10` antes que `v2` (la versión se ordena por
+`score.version_numero`, no como texto); la otra traspasa un cliente a otro asesor en una fecha de
+corte nueva y comprueba, con la sesión de cada uno simulada en la base, quién lo ve. La de interfaz pide los
 leads con las mismas funciones de la app y la ejecuta con `AppTest`: inicia sesión como asesor y abre el detalle de
 todos sus leads.
 
@@ -314,9 +331,11 @@ En la URL pública, un asesor de EMP-01 ve sus 12 leads y un gerente de EMP-02 v
 de su empresa; por la API, ese gerente recibe 0 leads al pedir los de EMP-01, y sin sesión la base
 respuesta `permission denied`.
 
-Con el puntaje v2 y el RLS del asesor (2026-09-17: `supabase db push` y disparo manual en verde, con
-la caché de extracción, 0 peticiones): 142 Caliente, 59 Tibio, 221 Frío y 559 Sin calificar; 637
-asignados y 344 sin cupo. En remoto el asesor AS-001 ve los mismos 13 leads y 0 filas del histórico.
+Con el puntaje v3 y el RLS por última fecha de corte (2026-09-17: `supabase db push` y disparo
+manual en verde, con la caché de extracción, 0 peticiones): 142 Caliente, 61 Tibio, 219 Frío y 559
+Sin calificar; 637 asignados y 344 sin cupo; 4 campos sin respaldo. En remoto el asesor AS-001 ve
+los mismos 13 leads y 0 filas del histórico. (Entre local y remoto un lead cambia de temperatura:
+`temperature = 0` no hace determinista al modelo.)
 
 ---
 
@@ -354,9 +373,10 @@ Cada fila dice qué se eligió, qué se descartó y por qué. El detalle está e
 | Decisión | Alternativa descartada | Por qué |
 |---|---|---|
 | **Puntaje aditivo con razones** | Modelo entrenado | El histórico predice poco (una regresión logística llega a AUC 0,548) y cada punto se traduce en una razón que el asesor puede leer |
-| **Validación con corte temporal** (antes y desde el 15 de junio), **declarada parcial** y con intervalos | Presentar la razón 2,16 como criterio cumplido | Los pesos vieron todo el histórico y la muestra de prueba tiene 29 cierres entre Caliente y Frío; pesos derivados solo del entrenamiento ordenan peor (AUC 0,583) |
-| **Sin conversación = valor esperado y «Sin calificar»** (v2) | Contar la falta de chat como «no» (v1) | Los tres canales tienen las mismas señales y tasas parecidas en el histórico; castigar la falta de dato dejaba el 79 % de la lista en Frío |
-| **Urgencia dentro de la prioridad** | Ordenar solo por calidad | Con decaimiento por espera, la calidad sola pierde contra atender fresco; la suma gana |
+| **Validación con corte temporal** (antes y desde el 15 de junio), **declarada parcial** y con intervalos | Presentar la razón Caliente/Frío como criterio cumplido | Los pesos y estados vieron todo el histórico y la prueba tiene 33 cierres entre Caliente y Frío |
+| **Cada estado vale lo que dice el histórico** (v3); sin chat, valor esperado y «Sin calificar» | «Sí» contra todo lo demás (v1), o valor esperado solo sin chat (v2) | Una sola regla para lo sabido y lo desconocido; «no informa» no es lo mismo en cuota (cierra menos) que en forma de pago (cierra como contado) |
+| **Urgencia dentro de la prioridad** | Ordenar solo por calidad | Con efecto causal de la espera, la calidad sola pierde contra atender fresco; la suma gana en todos los supuestos |
+| **Simulación simétrica y con tres supuestos causales** | Desenlace observado × caída por espera | El desenlace ya trae la espera real, y la caída por espera es observacional: se reporta el rango |
 | **Sin los registros «Sin gestión» ni `numero_contactos`** | Usar todo el histórico | Un lead que nadie llamó no dice nada de su calidad, y el número de contactos solo se conoce al final (fuga de información) |
 | **El corte es el último registro del día**, no el reloj | Medir la urgencia contra la hora de ejecución | Dos corridas sobre los mismos datos dan la misma lista |
 | **Reparto en serpentina**, con tope de capacidad y sin cruzar punto de venta | Repartir siempre en el mismo sentido | Así el primer asesor no se queda con todos los mejores leads del día |
@@ -370,7 +390,7 @@ Cada fila dice qué se eligió, qué se descartó y por qué. El detalle está e
 | **Caché por contenido, extractor y versión del prompt** | Volver a extraer en cada corrida | La segunda corrida no hace peticiones; cambiar el prompt sube la versión e invalida la caché sin borrarla |
 | **Etiquetas de referencia propuestas por la IA y revisadas por una persona** | Etiquetar a mano las 40 conversaciones | Cabía en el tiempo del ejercicio; se declara siempre así, nunca como etiquetado manual |
 | **Frase de apertura con plantilla** | Generarla con el modelo | No gasta cuota, siempre sale igual y no puede inventar datos |
-| **Comprobar la evidencia del modelo** contra lo que escribió el cliente | Mostrarla tal como llega | Un fragmento inventado o copiado del asesor se mostraría como cita; se registra en `problema_calidad` y no se cita |
+| **Comprobar la evidencia del modelo** contra la conversación, y tomar como desconocido lo que no tiene cita | Mostrarla tal como llega, o solo ocultarla | Un campo sin respaldo no debe mover el puntaje. Se toleran el encabezado «asesor [hora]:» y las erratas de copia; «no respondió» puede citar al asesor |
 
 ### Automatización y publicación
 
@@ -390,8 +410,10 @@ Cada fila dice qué se eligió, qué se descartó y por qué. El detalle está e
   solo los distinguen el precio del modelo y la urgencia.
 - **La validación del puntaje es parcial y la muestra es chica**: el intervalo de la razón
   Caliente/Frío (1,01 a 4,36) incluye el criterio de 1,8.
-- **La simulación de impacto depende de un supuesto** sobre qué pasa con lo que no se atiende; por
-  eso se reporta con y sin decaimiento, y la cifra que se defiende es la comparación justa (+7,1 %).
+- **La simulación de impacto depende de supuestos**: qué pasa con lo que no se atiende y cuánto
+  de la caída por espera es causal. Por eso se reporta con y sin espera y con tres supuestos
+  causales; la cifra que se defiende es la que no depende de ellos (+15 a +17 cierres frente a
+  atender lo más reciente).
 - **La exactitud de la extracción se mide sobre 40 conversaciones**: un error mueve un campo 2,5
   puntos, y cada campo se reporta con su intervalo de Wilson (por ejemplo, 97,5 % → 87 a 100 %).
   Ampliarla a unas 100, estratificadas y etiquetadas a ciegas, exige tiempo de una persona.
