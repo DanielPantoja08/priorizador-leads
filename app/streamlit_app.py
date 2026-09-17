@@ -34,6 +34,9 @@ ORDEN_TEMPERATURA = ["Caliente", "Tibio", "Frío", "Sin calificar"]
 ETIQUETA_FORMA_PAGO = {"contado": "Contado", "credito": "Crédito", "no_informa": "No informa"}
 ETIQUETA_MENCION = {"SI": "Sí", "NO": "No", "NO_INFORMA": "No informa"}
 
+# El gerente se queja de los leads que pasan 24 h sin que nadie los toque.
+HORAS_PARA_CONTACTAR = 24
+
 # PostgREST corta cada respuesta en `max_rows` (1.000 en supabase/config.toml) sin avisar.
 FILAS_POR_PAGINA = 1000
 
@@ -209,6 +212,30 @@ def horas_desde(valor: str | datetime | None, corte: date) -> float | None:
     registro = valor if isinstance(valor, datetime) else datetime.fromisoformat(valor)
     fin = datetime.combine(corte, datetime.max.time()).replace(tzinfo=registro.tzinfo)
     return round((fin - registro).total_seconds() / 3600, 1)
+
+
+def contactados_a_tiempo(df: pd.DataFrame, corte: date) -> tuple[int, int]:
+    """(contactados en menos de 24 h, leads medibles): el dolor que describe el gerente.
+
+    Solo cuentan los leads que al corte ya cumplieron 24 h; los más nuevos todavía están a tiempo.
+    Un lead con estado avanzado y sin fecha de contacto no se puede medir y queda fuera: se sabe que
+    lo llamaron, no cuándo.
+    """
+    a_tiempo = medibles = 0
+    for fila in df.to_dict("records"):
+        horas = horas_desde(fila.get("fecha_registro"), corte)
+        if horas is None or horas < HORAS_PARA_CONTACTAR:
+            continue
+        contacto = fila.get("fecha_primer_contacto")
+        if not contacto or pd.isna(contacto):
+            if fila.get("estado_gestion") != "Sin gestión":
+                continue  # contactado, pero sin fecha
+            medibles += 1
+            continue
+        medibles += 1
+        espera = horas_desde(fila["fecha_registro"], corte) - horas_desde(contacto, corte)
+        a_tiempo += espera <= HORAS_PARA_CONTACTAR
+    return a_tiempo, medibles
 
 
 def lead_de(df: pd.DataFrame, lead_id: str) -> dict:
@@ -441,10 +468,17 @@ def pantalla_tablero(sb: Client, corte: date) -> None:
 
     asignados = df[df["estado"] == "asignado"]
     sin_cupo = df[df["estado"] == "sin_cupo"]
-    a, b, c = st.columns(3)
+    a, b, c, d = st.columns(4)
     a.metric("Leads priorizados", len(df))
     b.metric("Asignados", len(asignados))
     c.metric("Sin cupo", len(sin_cupo))
+    a_tiempo, medibles = contactados_a_tiempo(df, corte)
+    d.metric(
+        "Contactados en menos de 24 h",
+        f"{a_tiempo / medibles:.0%}" if medibles else "—",
+        help=f"{a_tiempo} de {medibles} leads que ya cumplieron 24 h al corte. Quedan fuera los "
+        "que tienen estado avanzado sin fecha de contacto.",
+    )
 
     st.markdown("### Carga por asesor")
     carga = pd.DataFrame(

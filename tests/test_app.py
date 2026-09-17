@@ -14,6 +14,7 @@ import pytest
 
 from app.streamlit_app import (
     FILAS_POR_PAGINA,
+    contactados_a_tiempo,
     frase_de_apertura,
     horas_desde,
     lead_de,
@@ -301,3 +302,20 @@ class ConsultaFalsa:
 def test_se_traen_todas_las_filas_aunque_pasen_del_limite(total: int) -> None:
     filas = todas_las_filas(lambda: ConsultaFalsa(total))
     assert [f["i"] for f in filas] == list(range(total))
+
+
+def test_contactados_en_menos_de_24_h_solo_cuenta_lo_que_se_puede_medir() -> None:
+    corte = date(2026, 9, 10)
+    df = pd.DataFrame([
+        # A tiempo: registro el 8 a las 10, contacto el 9 a las 8.
+        {"fecha_registro": "2026-09-08T10:00:00", "fecha_primer_contacto": "2026-09-09T08:00:00", "estado_gestion": "Contactado"},  # noqa: E501
+        # Tarde: contacto dos días después.
+        {"fecha_registro": "2026-09-06T10:00:00", "fecha_primer_contacto": "2026-09-08T10:00:00", "estado_gestion": "Contactado"},  # noqa: E501
+        # Sin gestión y con más de 24 h: cuenta como no contactado a tiempo.
+        {"fecha_registro": "2026-09-07T10:00:00", "fecha_primer_contacto": None, "estado_gestion": "Sin gestión"},  # noqa: E501
+        # Todavía no cumple 24 h: no se mide.
+        {"fecha_registro": "2026-09-10T09:00:00", "fecha_primer_contacto": None, "estado_gestion": "Sin gestión"},  # noqa: E501
+        # Estado avanzado sin fecha de contacto: no se sabe cuándo, no se mide.
+        {"fecha_registro": "2026-09-01T10:00:00", "fecha_primer_contacto": None, "estado_gestion": "En proceso"},  # noqa: E501
+    ])  # fmt: skip
+    assert contactados_a_tiempo(df, corte) == (1, 3)
