@@ -137,6 +137,34 @@ Dos advertencias que conviene leer antes que las cifras:
    que implementan las reglas, así que la cifra que vale para juzgar la extracción con IA es la de
    Gemini.
 
+### Entonces, ¿para qué la IA? (`uv run python -m pipeline eval-robustness --con-gemini`)
+
+Las reglas aciertan tanto porque los datos repiten el mismo vocabulario: los 2.610 mensajes de
+cliente de las 677 conversaciones salen de **97 frases fijas**, en las que solo cambian el modelo y
+las cifras. Las reglas se escribieron mirando esas frases. Un cliente real no escribe así.
+
+Para medirlo, cada frase del cliente en las 40 conversaciones de referencia se reescribió con el
+mismo significado y otras palabras («¿Mañana los visito?» → «¿les caigo mañana?»; «Estoy en
+centrales» → «estoy reportado en datacrédito»), sin tocar el modelo ni las cifras. Luego se
+midieron los dos extractores contra **las mismas etiquetas**:
+
+| Extractor | Frases originales | Frases reformuladas | Caída |
+|---|---|---|---|
+| Reglas | 99,4 % | **87,2 %** | −12,2 puntos |
+| Gemini (dos corridas) | 98,3 % y 98,3 % | **97,5 % y 98,6 %** | menos de 1 punto |
+
+Con las reglas se derrumban justo los campos que dependen de cómo se dice: intención (97,5 % → 70,0 %),
+objeción (97,5 % → 72,5 %) y si pidió cita (100 % → 72,5 %). El modelo y la cuota casi no se mueven.
+Gemini no usó el respaldo por reglas en ninguna de las corridas.
+
+**La conclusión que se defiende:** con estos datos, las reglas bastan; con conversaciones reales,
+que no repiten 97 frases, no. Por eso la extracción la hace el modelo, y las reglas quedan como
+respaldo y como línea base.
+
+Límites de esta prueba: **las reformulaciones las propuso la IA y están pendientes de revisión**
+(`evaluation/reformulaciones.json`, `"revisado": false`), así que las cifras son preliminares; y es
+una sola redacción por frase, así que mide fragilidad, no la exactitud esperada en producción.
+
 ---
 
 ## Seguridad y aislamiento
