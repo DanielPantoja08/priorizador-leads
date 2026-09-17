@@ -9,7 +9,8 @@ Cada empresa ve únicamente sus datos, y ese aislamiento se aplica en la base de
 interfaz.
 
 **App en línea:** https://priorizador-leads.streamlit.app · **Pipeline diario:**
-[GitHub Actions](https://github.com/DanielPantoja08/priorizador-leads/actions/workflows/pipeline.yml)
+[GitHub Actions](https://github.com/DanielPantoja08/priorizador-leads/actions/workflows/pipeline.yml) ·
+**CI:** [pruebas](https://github.com/DanielPantoja08/priorizador-leads/actions/workflows/ci.yml)
 
 ---
 
@@ -34,8 +35,9 @@ Un solo comando ejecuta todo: `uv run python -m pipeline run`.
 | Conversaciones | 677 chats · 4.310 mensajes |
 | Extracción con IA | 677 conversaciones en **68 peticiones**, 8,4 min. La segunda corrida reusa la caché: **0 peticiones y 3 s** |
 | Señales consolidadas | 628 leads |
-| Puntaje | 981 leads elegibles: 780 Frío, 59 Tibio, 142 Caliente |
+| Puntaje (v2) | 981 leads elegibles: 142 Caliente, 58 Tibio, 222 Frío y 559 Sin calificar |
 | Asignación | 637 asignados y 344 sin cupo, sobre una capacidad de 694 |
+| Evidencia de la IA | 10 fragmentos citados que no aparecen en lo que escribió el cliente: se registran y no se muestran como cita |
 
 La corrida es **idempotente**: repetirla con los mismos insumos deja las tablas byte a byte iguales
 (verificado comparando huellas md5 de `senales_lead`, `score` y `asignacion`).
@@ -52,6 +54,12 @@ directamente en razones que el asesor puede leer.
 **A. Calidad (0 a 9)** — derivada de las tasas de cierre de 2.021 leads gestionados:
 pidió cita `+3`, manifestó cuota inicial `+3`, modelo de $10 M o más `+2`, pago de contado `+1`.
 
+Cita, cuota y contado solo se conocen si el cliente escribió por WhatsApp. **Un lead sin
+conversación no cuenta como un «no»** (puntaje v2): en el histórico esas señales aparecen igual en
+los tres canales, así que suma su valor esperado —2,27 puntos, redondeado a `+2`: cita en el
+29,4 % de los casos, cuota en el 40,7 % y contado en el 17,2 %— más el precio del modelo. En v1
+valían 0 y el 79 % de la lista salía Frío por falta de dato, no por baja calidad.
+
 **B. Ajuste por conversación (−3 a +3)** — **heurístico y así se declara**: el histórico no contiene
 estas señales. Intención alta `+2` / baja `−2`, objeción de centrales o sin inicial `−1`, el cliente
 no respondió `−1`, escribió por varios canales `+1`.
@@ -60,6 +68,8 @@ no respondió `−1`, escribió por varios canales `+1`.
 después. Con gestión: cotización enviada 3, en proceso o no contesta 2, contactado 1.
 
 `temperatura = f(A + B)`: Caliente ≥ 6, Tibio 3–5, Frío ≤ 2. La urgencia ordena pero no calienta.
+Un lead sin conversación es **«Sin calificar»**, no Frío: la frase de apertura le pide al asesor
+averiguar en la llamada lo que el puntaje no sabe.
 
 ### Validación contra el histórico (`uv run python -m pipeline validate-scoring`)
 
@@ -83,8 +93,10 @@ entrenamiento y 0,602 en prueba: **el puntaje ordena, no predice con certeza.**
 ### Cuántos cierres más son (`uv run python -m pipeline simulate-policy`)
 
 El AUC dice que el puntaje ordena; esto dice qué significa eso en ventas. Sobre el mismo histórico
-se simulan las dos políticas bajo la misma capacidad diaria —orden de llegada, que es lo que se
-hace hoy, contra orden por puntaje— y se cuentan los cierres que alcanzan a entrar en el cupo:
+se simulan las políticas bajo la misma capacidad diaria y se cuentan los cierres que alcanzan a
+entrar en el cupo. Se corre en dos escenarios, porque el supuesto pesa más que la política.
+
+**Sin decaimiento:** el desenlace es propiedad del lead; si no entra en el cupo del día, se pierde.
 
 | Capacidad diaria | Orden de llegada | Al azar | **Priorizado** | Ganancia |
 |---|---|---|---|---|
@@ -104,9 +116,27 @@ dejar gente sin llamar, que es justamente el problema que describe el gerente.
 La columna «al azar» es el control: el promedio de 200 barajadas con semilla fija. Queda pegada a
 la del orden de llegada, que es lo que debe pasar si el orden actual no aporta información.
 
-Descansa en un supuesto explícito: **el desenlace es propiedad del lead, no del orden en que se
-atendió.** Un lead que cerró y queda fuera del cupo se cuenta como perdido, y el histórico no trae
-hora dentro del día, así que la llegada se aproxima con el `lead_id`, que es correlativo.
+**Con decaimiento por espera:** el histórico contradice el supuesto anterior. Lo que no cabe hoy
+pasa a mañana, y cada día de espera conserva solo parte de la probabilidad de cierre: la tasa con
+esa espera sobre la tasa con menos de 24 h (1 día → 64 %, 3 días → 56 %, 5 días → 41 %; después
+se pierde). La política completa suma la urgencia del componente C con el mismo código del puntaje:
+
+| Capacidad diaria | Orden de llegada | Más reciente primero | Solo calidad (A) | **Calidad + urgencia** | Ganancia sobre el más reciente |
+|---|---|---|---|---|---|
+| 50 % de la demanda | 39,8 | 102,0 | 103,9 | **122,6** | +20,6 (20,2 %) |
+| 70 % de la demanda | 63,6 | 145,0 | 150,7 | **155,3** | +10,3 (7,1 %) |
+| 90 % de la demanda | 98,7 | 185,0 | 181,4 | **187,0** | +2,0 (1,1 %) |
+| 100 % de la demanda | 197,0 | 197,0 | 197,0 | **197,0** | +0,0 (0,0 %) |
+
+Cómo se lee: contra el orden de llegada con pendientes la diferencia es enorme, pero **casi toda se
+debe a atender fresco**, no al puntaje: ese orden atiende siempre lo más viejo. La comparación justa
+es contra «lo más reciente primero», y ahí la política completa suma **10,3 cierres (7,1 %)** con la
+capacidad de hoy. La calidad sola no alcanza: al 90 % queda por debajo, porque demora leads frescos
+por atender buenos leads que ya se enfriaron. Por eso la urgencia forma parte de la prioridad.
+
+El histórico no trae hora dentro del día: la llegada se aproxima con el `lead_id`, que es
+correlativo, y un lead del día se toma a las 12 h de espera. El tablero muestra el indicador que
+este análisis vuelve central: **leads contactados en menos de 24 h** (hoy, 47 % en EMP-01).
 
 ---
 
@@ -178,14 +208,18 @@ que mide fragilidad, no la exactitud esperada en producción.
   Un error de filtrado en la interfaz no expondría datos de otra empresa.
 - `authenticated` **solo lee**: no hay políticas de `insert`, `update` ni `delete`.
 - Las vistas se crean con `security_invoker = true`; sin esa opción una vista ignora RLS.
-- Un asesor ve solo sus leads; un gerente, toda su empresa.
+- Un asesor ve **solo los datos de sus clientes asignados**, también consultando la API directamente:
+  leads (incluidos otros canales del mismo cliente), clientes, conversaciones, mensajes,
+  extracciones, puntajes y señales. El histórico y los problemas de calidad son del gerente, que ve
+  toda su empresa.
 - Las conversaciones huérfanas (sin empresa) no son visibles para nadie.
 - La llave `service_role` se usa **únicamente** en `scripts/crear_usuarios_demo.py`, nunca en la app.
 - `.env` y `.streamlit/secrets.toml` están fuera del repositorio; solo se versionan los `.example`.
 
 `tests/test_aislamiento.py` comprueba todo esto de extremo a extremo contra el Supabase local, con
-sesiones reales: 11 pruebas que verifican que un usuario de EMP-01 no ve una sola fila de otra
-empresa, en seis tablas y en la vista diaria.
+sesiones reales: 19 pruebas que verifican que un usuario de EMP-01 no ve una sola fila de otra
+empresa, en seis tablas y en la vista diaria, y que el asesor AS-001 ve 13 leads (sus 12 asignados
+y otro canal de uno de esos clientes) frente a los 494 del gerente, y 0 filas del histórico.
 
 ### La misma lista, como API
 
@@ -241,8 +275,9 @@ mostrar con cualquier asesor y no solo con uno. La contraseña es la de `DEMO_PA
 comparte fuera del repositorio.
 
 Antes de cada commit: `uv run ruff check .`, `uv run ruff format .` y `uv run pytest -q`
-(**298 pruebas**; ninguna llama a servicios externos). Dos usan el Supabase local y se omiten solas
-si no está en ejecución: la de aislamiento y la de interfaz. Esta última pide los leads con las
+(**328 pruebas**; ninguna llama a servicios externos). Las 23 de `test_aislamiento.py` y
+`test_interfaz.py` usan el Supabase local y se omiten solas si no está en ejecución. La de interfaz
+pide los leads con las
 mismas funciones de la app y la ejecuta con `AppTest`: inicia sesión como asesor y abre el detalle de
 todos sus leads.
 
@@ -253,11 +288,16 @@ El código es el mismo que en local; solo cambian las variables (TRD 11.3).
 | Pieza | Dónde | Cómo |
 |---|---|---|
 | Base | Supabase remoto, São Paulo | `supabase link` y `supabase db push --include-seed` |
-| Pipeline | [GitHub Actions](.github/workflows/pipeline.yml) | Todos los días a las 06:00 de Bogotá y a mano (`workflow_dispatch`, con fecha y extractor) |
+| Pipeline | [GitHub Actions](.github/workflows/pipeline.yml) | Todos los días a las 06:00 de Bogotá, cuando cambian los insumos de `data/raw/` y a mano (`workflow_dispatch`, con fecha y extractor) |
+| CI | [GitHub Actions](.github/workflows/ci.yml) | En cada push y pull request: `ruff`, `pytest` y `validate-scoring` |
 | App | Streamlit Community Cloud | `app/streamlit_app.py`, Python 3.12, dependencias de `app/requirements.txt` |
 
-El workflow instala con `uv sync --frozen`, pasa `ruff` y `pytest`, corre el pipeline y termina con
-`validate-scoring`, que falla si el puntaje deja de cumplir el criterio. Secretos: `DATABASE_URL`
+Son dos workflows a propósito: una prueba rota avisa en CI y no impide publicar la lista del día.
+CI instala con `uv sync --frozen`, pasa `ruff` y `pytest` y termina con `validate-scoring`, que falla
+si un cambio en el histórico o en los pesos rompe el criterio. El pipeline solo corre
+`pipeline run` y, si falla, abre un issue con el enlace a la corrida. Con los insumos estáticos de
+este ejercicio el cron produce cada día la misma lista: es la idempotencia esperada, no un defecto.
+Secretos: `DATABASE_URL`
 (por el *session pooler*, puerto 5432: el *transaction pooler* no admite las sentencias preparadas
 de psycopg) y `GEMINI_API_KEY`. La app solo recibe `SUPABASE_URL` y `SUPABASE_ANON_KEY`.
 
@@ -271,7 +311,11 @@ local. La temperatura quedó en 142 Caliente, 60 Tibio y 779 Frío: un lead pas�
 respecto de la corrida local, porque `temperature = 0` no hace determinista al modelo (TRD 8.5).
 En la URL pública, un asesor de EMP-01 ve sus 12 leads y un gerente de EMP-02 ve los 201 asignados
 de su empresa; por la API, ese gerente recibe 0 leads al pedir los de EMP-01, y sin sesión la base
-responde `permission denied`.
+respuesta `permission denied`.
+
+Con el puntaje v2 y el RLS del asesor (2026-09-17: `supabase db push` y disparo manual en verde, con
+la caché de extracción, 0 peticiones): 142 Caliente, 59 Tibio, 221 Frío y 559 Sin calificar; 637
+asignados y 344 sin cupo. En remoto el asesor AS-001 ve los mismos 13 leads y 0 filas del histórico.
 
 ---
 
@@ -309,7 +353,9 @@ Cada fila dice qué se eligió, qué se descartó y por qué. El detalle está e
 | Decisión | Alternativa descartada | Por qué |
 |---|---|---|
 | **Puntaje aditivo con razones** | Modelo entrenado | El histórico predice poco (una regresión logística llega a AUC 0,548) y cada punto se traduce en una razón que el asesor puede leer |
-| **Validación con corte temporal** (antes y desde el 15 de junio) | Medir sobre los mismos datos con que se eligieron los pesos | Evita que la validación premie un ajuste a esos datos |
+| **Validación con corte temporal** (antes y desde el 15 de junio), **declarada parcial** y con intervalos | Presentar la razón 2,16 como criterio cumplido | Los pesos vieron todo el histórico y la muestra de prueba tiene 29 cierres entre Caliente y Frío; pesos derivados solo del entrenamiento ordenan peor (AUC 0,583) |
+| **Sin conversación = valor esperado y «Sin calificar»** (v2) | Contar la falta de chat como «no» (v1) | Los tres canales tienen las mismas señales y tasas parecidas en el histórico; castigar la falta de dato dejaba el 79 % de la lista en Frío |
+| **Urgencia dentro de la prioridad** | Ordenar solo por calidad | Con decaimiento por espera, la calidad sola pierde contra atender fresco; la suma gana |
 | **Sin los registros «Sin gestión» ni `numero_contactos`** | Usar todo el histórico | Un lead que nadie llamó no dice nada de su calidad, y el número de contactos solo se conoce al final (fuga de información) |
 | **El corte es el último registro del día**, no el reloj | Medir la urgencia contra la hora de ejecución | Dos corridas sobre los mismos datos dan la misma lista |
 | **Reparto en serpentina**, con tope de capacidad y sin cruzar punto de venta | Repartir siempre en el mismo sentido | Así el primer asesor no se queda con todos los mejores leads del día |
@@ -323,12 +369,14 @@ Cada fila dice qué se eligió, qué se descartó y por qué. El detalle está e
 | **Caché por contenido, extractor y versión del prompt** | Volver a extraer en cada corrida | La segunda corrida no hace peticiones; cambiar el prompt sube la versión e invalida la caché sin borrarla |
 | **Etiquetas de referencia propuestas por la IA y revisadas por una persona** | Etiquetar a mano las 40 conversaciones | Cabía en el tiempo del ejercicio; se declara siempre así, nunca como etiquetado manual |
 | **Frase de apertura con plantilla** | Generarla con el modelo | No gasta cuota, siempre sale igual y no puede inventar datos |
+| **Comprobar la evidencia del modelo** contra lo que escribió el cliente | Mostrarla tal como llega | Un fragmento inventado o copiado del asesor se mostraría como cita; se registra en `problema_calidad` y no se cita |
 
 ### Automatización y publicación
 
 | Decisión | Alternativa descartada | Por qué |
 |---|---|---|
-| **Un solo comando** (`pipeline run`) y **GitHub Actions** con cron y disparo manual | Un orquestador aparte (Airflow, un servidor) | Es gratis, vive junto al código y corre el mismo comando que en local |
+| **Un solo comando** (`pipeline run`) y **GitHub Actions** con cron, disparo por insumos nuevos y manual | Un orquestador aparte (Airflow, un servidor) | Es gratis, vive junto al código y corre el mismo comando que en local |
+| **CI separado del pipeline productivo** | Pruebas dentro del mismo job | Una prueba rota no deja a los asesores sin lista |
 | **Streamlit Community Cloud** | Un frontend aparte (React en Vercel) | Todo en Python y publicación directa desde el repositorio |
 | **uv con `uv.lock`**; `app/requirements.txt` exportado desde el lock | `pip` con `requirements.txt` editado a mano | El entorno es el mismo en local, en CI y en la nube |
 
@@ -336,9 +384,16 @@ Cada fila dice qué se eligió, qué se descartó y por qué. El detalle está e
 
 ## Límites conocidos
 
-- **565 de los 981 leads priorizados no tienen conversación de WhatsApp.** Su techo son 2 puntos de
-  calidad, así que quedan en Frío y solo la urgencia los ordena. Es coherente —no hay información
-  para calificarlos más alto— pero explica por qué el 79 % de la lista sale Frío.
+- **559 de los 981 leads priorizados no tienen conversación de WhatsApp** y salen «Sin calificar».
+  Suman el valor esperado del histórico, que los ordena bien frente a los demás, pero entre ellos
+  solo los distinguen el precio del modelo y la urgencia.
+- **La validación del puntaje es parcial y la muestra es chica**: el intervalo de la razón
+  Caliente/Frío (1,01 a 4,36) incluye el criterio de 1,8.
+- **La simulación de impacto depende de un supuesto** sobre qué pasa con lo que no se atiende; por
+  eso se reporta con y sin decaimiento, y la cifra que se defiende es la comparación justa (+7,1 %).
+- **La exactitud de la extracción se mide sobre 40 conversaciones**: un error mueve un campo 2,5
+  puntos, y cada campo se reporta con su intervalo de Wilson (por ejemplo, 97,5 % → 87 a 100 %).
+  Ampliarla a unas 100, estratificadas y etiquetadas a ciegas, exige tiempo de una persona.
 - El **ajuste por conversación no tiene validación histórica**. Por eso pesa poco y la app lo marca
   como heurístico.
 - La extracción con IA **no es reproducible al 100 %** entre corridas, aunque la caché hace que una
@@ -390,8 +445,7 @@ En orden de lo que más movería la aguja:
    medido. Con desenlaces propios se sabría si la intención declarada predice algo.
 3. **Reasignar desde el tablero.** El gerente ve los prioritarios sin cupo pero tiene que resolverlo
    por fuera; darle el botón cierra el flujo sin salir de la herramienta.
-4. **Alertar cuando una corrida falla.** `ejecucion` ya guarda el estado y el error: falta que
-   alguien se entere sin abrir la app.
+4. **Ampliar el conjunto de referencia** a unas 100 conversaciones etiquetadas a ciegas.
 5. **Podar la caché de extracción.** Se conservan las cuatro versiones de prompt de cada
    conversación; conviene archivar las que ya no son vigentes.
 6. **Reconstruir la ciudad y el punto de venta faltantes** con el histórico del cliente, en vez de
