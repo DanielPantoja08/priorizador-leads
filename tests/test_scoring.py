@@ -1,4 +1,4 @@
-"""Pruebas del puntaje v2 (TRD 9): los tres componentes, la elegibilidad y el orden."""
+"""Pruebas del puntaje v3 (TRD 9): los tres componentes, la elegibilidad y el orden."""
 
 from __future__ import annotations
 
@@ -71,7 +71,7 @@ def test_sin_conversacion_no_queda_por_debajo_de_un_chat_sin_senales() -> None:
 
 
 def test_cuota_declarada_pero_sin_cifra_no_suma() -> None:
-    p = puntuar([lead("LEAD-1")], senales(menciona_cuota="NO"))[0]
+    p = puntuar([lead("LEAD-1")], senales(menciona_cuota="NO", forma_pago="credito"))[0]
     assert p.puntos_calidad == 0
 
 
@@ -138,7 +138,7 @@ def test_cortes_de_temperatura(puntos: int, esperado: str) -> None:
 
 def test_temperatura_no_incluye_la_urgencia() -> None:
     # Un lead recién registrado suma 5 de urgencia, pero eso no lo vuelve Caliente (TRD 9.2).
-    p = puntuar([lead("LEAD-1")], senales(cliente_respondio=True))[0]
+    p = puntuar([lead("LEAD-1")], senales(cliente_respondio=True, forma_pago="credito"))[0]
     assert p.puntos_urgencia == 5
     assert p.prioridad == 5
     assert p.temperatura == "Frío"
@@ -231,3 +231,19 @@ def test_lo_que_no_tiene_respaldo_queda_en_las_razones_sin_puntos() -> None:
     p = puntuar([lead("LEAD-1")], senales(cliente_respondio=True, sin_respaldo=("pidio_cita",)))[0]
     razon = next(r for r in p.razones if "sin respaldo" in r["factor"])
     assert razon["puntos"] == 0 and "pidio_cita" in razon["factor"]
+
+
+@pytest.mark.parametrize(("estado", "puntos"), [("contado", 1), ("no_informa", 1), ("credito", 0)])
+def test_la_forma_de_pago_puntua_segun_el_historico_de_cada_estado(
+    estado: str, puntos: int
+) -> None:
+    # v3: «no informa» cierra 12,3 % en el histórico, como contado (11,8 %); crédito, 8,4 %.
+    p = puntuar([lead("LEAD-1")], senales(forma_pago=estado, cliente_respondio=True))[0]
+    assert p.puntos_calidad == puntos
+
+
+@pytest.mark.parametrize(("estado", "puntos"), [("SI", 3), ("NO", 0), ("NO_INFORMA", 0)])
+def test_la_cuota_no_informada_no_puntua(estado: str, puntos: int) -> None:
+    # «No informa» cierra 7,8 %, por debajo de «no» (8,7 %).
+    p = puntuar([lead("LEAD-1")], senales(menciona_cuota=estado, forma_pago="credito"))[0]
+    assert p.puntos_calidad == puntos

@@ -20,23 +20,34 @@ import pandas as pd
 from pipeline.extract.consolidar import Senales
 
 # Subir cualquier peso obliga a subir esta versión: la tabla `score` guarda una fila por versión.
-# v2: un lead sin conversación ya no cuenta como «no» en cita, cuota y contado (ver abajo).
-VERSION_SCORE = "v2"
+# v2: un lead sin conversación ya no cuenta como «no» en cita, cuota y contado.
+# v3: cada estado de una señal vale lo que dice el histórico de ese estado (ESTADOS_QUE_PUNTUAN), y
+#     un campo cuya evidencia no aparece en el chat se toma como desconocido.
+VERSION_SCORE = "v3"
 
 # Componente A (TRD 9.2). Las tasas que los justifican están en docs/EDA.md, sección 4.
 PESOS_CALIDAD = {
     "cita": 3,  # pidió cita: cierra 11,8 % contra 8,9 %
     "cuota": 3,  # manifestó cuota inicial: 11,8 % contra 8,3 %
     "precio_alto": 2,  # modelo de $10 M o más: 11,5 % contra 8,5 %
-    "contado": 1,  # pago de contado: 11,8 % contra 8,4 %
+    "contado": 1,  # forma de pago: contado 11,8 % contra crédito 8,4 %
 }
 PRECIO_ALTO = 10_000_000
 
-# Cita, cuota y contado solo se saben si el cliente escribió por WhatsApp. En el histórico esas
-# señales aparecen igual en los tres canales y los canales cierran parecido, así que no tener la
-# conversación es falta de dato, no un «no». Un lead sin conversación suma el valor esperado de
-# las tres, con su frecuencia en el histórico gestionado, redondeado al entero
-# (`pipeline validate-scoring` lo calcula), y su temperatura es «Sin calificar», no Frío.
+# Qué estados de cada señal reciben su peso. Una señal no es «sí» contra «todo lo demás»: cada
+# estado vale lo que dice el histórico de ese mismo estado. `pipeline validate-scoring` comprueba
+# que ningún estado sin puntos cierre más que uno con puntos.
+ESTADOS_QUE_PUNTUAN = {
+    "cita": frozenset({True}),
+    "cuota": frozenset({"SI"}),  # «no informa» cierra 7,8 %, por debajo de «no» (8,7 %): 0
+    "contado": frozenset({"contado", "no_informa"}),  # «no informa» 12,3 %, como contado (11,8 %)
+}
+
+# Cita, cuota y forma de pago solo se saben si el cliente escribió por WhatsApp. En el histórico
+# esas señales aparecen igual en los tres canales y los canales cierran parecido, así que no tener
+# la conversación es falta de dato, no un «no». Un lead sin conversación suma el valor esperado de
+# las tres (peso × frecuencia de los estados que puntúan en el histórico gestionado), redondeado al
+# entero (`pipeline validate-scoring` lo calcula), y su temperatura es «Sin calificar», no Frío.
 PUNTOS_SIN_CONVERSACION = 2
 SENALES_DE_CONVERSACION = ("cita", "cuota", "contado")
 SIN_CALIFICAR = "Sin calificar"
@@ -132,9 +143,9 @@ def _calidad(senales: Senales | None, precio_lista: int | None) -> tuple[int, li
             "factor": "sin conversación: valor esperado de cita, cuota y contado",
             "puntos": PUNTOS_SIN_CONVERSACION,
         })  # fmt: skip
-    if senales is not None and senales.pidio_cita:
+    if senales is not None and senales.pidio_cita in ESTADOS_QUE_PUNTUAN["cita"]:
         razones.append({"factor": "pidió cita", "puntos": PESOS_CALIDAD["cita"]})
-    if senales is not None and senales.menciona_cuota == "SI":
+    if senales is not None and senales.menciona_cuota in ESTADOS_QUE_PUNTUAN["cuota"]:
         razones.append({
             "factor": "manifestó cuota inicial",
             "puntos": PESOS_CALIDAD["cuota"],
@@ -146,8 +157,13 @@ def _calidad(senales: Senales | None, precio_lista: int | None) -> tuple[int, li
             "puntos": PESOS_CALIDAD["precio_alto"],
             "valor": precio_lista,
         })  # fmt: skip
-    if senales is not None and senales.forma_pago == "contado":
-        razones.append({"factor": "paga de contado", "puntos": PESOS_CALIDAD["contado"]})
+    if senales is not None and senales.forma_pago in ESTADOS_QUE_PUNTUAN["contado"]:
+        factor = (
+            "paga de contado"
+            if senales.forma_pago == "contado"
+            else "no dijo la forma de pago (en el histórico cierra como contado)"
+        )
+        razones.append({"factor": factor, "puntos": PESOS_CALIDAD["contado"]})
     return sum(r["puntos"] for r in razones), razones
 
 
