@@ -87,8 +87,7 @@ def ejecutar(
         for tipo in correcciones:
             colector.registrar(ARCHIVO_CONVERSACIONES, conversacion_id, "cuota_inicial_cop", tipo, extraccion.cuota_inicial_cop, "valor corregido por la validación", empresa)  # fmt: skip
         # Igual con la evidencia: se comprueba siempre y la base guarda la que dio el extractor.
-        textos_cliente = [m["texto"] for m in conversacion["mensajes"] if m["emisor"] == "cliente"]
-        for campo in campos_sin_respaldo(extraccion.evidencia, textos_cliente):
+        for campo in campos_sin_respaldo(extraccion.evidencia, conversacion["mensajes"]):
             sin_respaldo += 1
             colector.registrar(ARCHIVO_CONVERSACIONES, conversacion_id, f"evidencia.{campo}", "evidencia_sin_respaldo", extraccion.evidencia[campo], "no se muestra como cita", empresa)  # fmt: skip
 

@@ -163,20 +163,16 @@ def evidencia_de(sb: Client, ids: list[str], prompt_version: str | None) -> list
 def lineas_de_evidencia(fila: dict, mensajes: pd.DataFrame) -> list[str]:
     """La evidencia de una conversación, lista para mostrar.
 
-    Solo se cita entre comillas lo que el cliente escribió de verdad en esa conversación. Un
-    fragmento que no aparece (inventado, dicho por el asesor o de otro chat) se avisa sin citarlo.
+    Solo se cita entre comillas lo que aparece de verdad en esa conversación, dicho por quien
+    corresponde. Un fragmento inventado, del asesor o de otro chat se avisa sin citarlo.
     """
     evidencia = fila.get("evidencia") or {}
-    textos = []
+    suyos = []
     if not mensajes.empty:
-        del_cliente = mensajes[
-            (mensajes["conversacion_id"] == fila["conversacion_id"])
-            & (mensajes["emisor"] == "cliente")
-        ]
-        textos = list(del_cliente["texto"])
-    sin_respaldo = set(campos_sin_respaldo(evidencia, textos))
+        suyos = mensajes[mensajes["conversacion_id"] == fila["conversacion_id"]].to_dict("records")
+    sin_respaldo = set(campos_sin_respaldo(evidencia, suyos))
     return [
-        f"- `{campo}`: *no aparece en lo que escribió el cliente; no se cita*"
+        f"- `{campo}`: *no aparece en la conversación; no se cita*"
         if campo in sin_respaldo
         else f"- `{campo}`: «{fragmento}»"
         for campo, fragmento in evidencia.items()
