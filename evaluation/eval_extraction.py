@@ -17,6 +17,7 @@ RAIZ = Path(__file__).resolve().parent.parent
 if str(RAIZ) not in sys.path:
     sys.path.insert(0, str(RAIZ))
 
+from eda.comun import wilson  # noqa: E402
 from pipeline.extract.rules import ExtractorReglas  # noqa: E402
 from pipeline.extract.schema import CAMPOS_EVALUADOS, Extraccion  # noqa: E402
 from pipeline.ingest import leer_conversaciones, leer_csv  # noqa: E402
@@ -86,8 +87,15 @@ def tabla_markdown(marcadores: dict[str, dict[str, tuple[int, int]]]) -> str:
         celdas = []
         for extractor in extractores:
             aciertos, total = marcadores[extractor][campo]
-            porcentaje = f"{aciertos / total * 100:.1f}".replace(".", ",") if total else "—"
-            celdas.append(f"{porcentaje} % ({aciertos}/{total})")
+            if not total:
+                celdas.append("—")
+                continue
+            # Con 40 conversaciones un solo error mueve el campo 2,5 puntos: el intervalo lo muestra.
+            _, bajo, alto = wilson(aciertos, total)
+            celdas.append(
+                f"{aciertos / total * 100:.1f} % ({aciertos}/{total}) · IC {bajo * 100:.0f}–"
+                f"{alto * 100:.0f}".replace(".", ",")
+            )
         lineas.append(f"| `{campo}` | " + " | ".join(celdas) + " |")
 
     # Promedio simple de los campos con datos, como cifra de resumen.
@@ -166,6 +174,10 @@ def main(ruta_gold: Path = RUTA_GOLD, con_gemini: bool = False) -> int:
 
     print(f"Conjunto de referencia: {len(referencia)} conversaciones revisadas\n")
     print(tabla_markdown(marcadores))
+    print(
+        "\nIC: intervalo de Wilson al 95 % por campo. Con esta muestra, diferencias de uno o dos "
+        "aciertos entre extractores o versiones de prompt quedan dentro del ruido."
+    )
     print(nota)
     return 0
 
