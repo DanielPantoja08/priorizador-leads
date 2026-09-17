@@ -184,11 +184,11 @@ def test_un_nombre_vacio_o_en_blanco_no_rompe_la_frase(vacio: object) -> None:
     assert frase_de_apertura(fila(nombre=vacio), CORTE).startswith("El cliente ")
 
 
-def test_sin_conversacion_la_frase_lo_dice_y_pide_confirmar() -> None:
+def test_sin_conversacion_la_frase_lo_dice_y_pide_calificarlo() -> None:
     # Prometer datos que no existen sería peor que no decir nada.
     frase = frase_de_apertura(fila(ia_conversaciones=0), CORTE)
     assert "no tiene conversación" in frase
-    assert "Confirme modelo y forma de pago" in frase
+    assert "Califíquelo" in frase and "cuota inicial" in frase
     assert "$2.000.000" not in frase
 
 

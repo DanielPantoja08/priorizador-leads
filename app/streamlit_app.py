@@ -28,8 +28,8 @@ from pipeline.extract.evidencia import campos_sin_respaldo  # noqa: E402  (solo 
 TITULO = "Priorizador Diario de Leads"
 
 # Color y texto: el color solo acompaña, nunca es la única señal.
-ESTILO_TEMPERATURA = {"Caliente": "🔴", "Tibio": "🟠", "Frío": "🔵"}
-ORDEN_TEMPERATURA = ["Caliente", "Tibio", "Frío"]
+ESTILO_TEMPERATURA = {"Caliente": "🔴", "Tibio": "🟠", "Frío": "🔵", "Sin calificar": "⚪"}
+ORDEN_TEMPERATURA = ["Caliente", "Tibio", "Frío", "Sin calificar"]
 
 ETIQUETA_FORMA_PAGO = {"contado": "Contado", "credito": "Crédito", "no_informa": "No informa"}
 ETIQUETA_MENCION = {"SI": "Sí", "NO": "No", "NO_INFORMA": "No informa"}
@@ -250,7 +250,8 @@ def frase_de_apertura(lead: dict, corte: date) -> str:
             if modelo
             else "No dejó modelo de interés."
         )
-        return f"{nombre} no tiene conversación de WhatsApp. {pedido} Confirme modelo y forma de pago."  # fmt: skip
+        # Sin chat el lead está «Sin calificar»: la llamada es para averiguar lo que el puntaje no sabe.
+        return f"{nombre} no tiene conversación de WhatsApp. {pedido} Califíquelo: confirme modelo, forma de pago, cuota inicial y si quiere pasar a verla."  # fmt: skip
 
     partes = []
     modelo = lead.get("ia_modelo") or lead.get("ia_modelo_texto")
