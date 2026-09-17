@@ -7,9 +7,10 @@ import pytest
 
 from evaluation.simular_politica import (
     DIAS_MAXIMOS_DE_ESPERA,
+    atendidos_con_espera,
     cierres_al_azar,
     cierres_capturados,
-    cierres_con_espera,
+    cierres_esperados,
     comparar,
     cupo,
     dias_de,
@@ -19,6 +20,7 @@ from evaluation.simular_politica import (
     por_llegada_con_pendientes,
     por_puntaje,
     por_puntaje_con_urgencia,
+    probabilidad_base,
     tabla,
 )
 
@@ -183,24 +185,63 @@ def dias_seguidos(*jornadas: list[tuple[str, int, int]]) -> pd.DataFrame:
 FACTORES = {0: 1.0, 1: 0.5, 2: 0.5, 3: 0.5, 4: 0.5, 5: 0.5}
 
 
-def test_con_capacidad_para_todos_nadie_espera_y_no_hay_decaimiento() -> None:
+def test_con_capacidad_para_todos_nadie_espera() -> None:
     df = dias_seguidos([("A", 1, 1), ("B", 0, 0)], [("C", 0, 1)])
-    assert cierres_con_espera(df, por_llegada_con_pendientes, 1.0, FACTORES) == 2
+    esperas = atendidos_con_espera(df, por_llegada_con_pendientes, 1.0)
+    assert sorted(df.loc[esperas.index, "lead_id"]) == ["A", "B", "C"]
+    assert set(esperas) == {0}
 
 
-def test_lo_que_no_cabe_pasa_al_dia_siguiente_y_cierra_con_menos_probabilidad() -> None:
+def test_lo_que_no_cabe_pasa_al_dia_siguiente() -> None:
     # Cupo de 1 por día (50 % de 2). Por llegada, el día 2 se atiende B, que ya esperó un día.
     df = dias_seguidos([("A", 0, 0), ("B", 0, 1)], [("C", 0, 0), ("D", 0, 0)])
-    assert cierres_con_espera(df, por_llegada_con_pendientes, 0.5, FACTORES) == pytest.approx(0.5)
-    # Lo más reciente primero deja a B esperando para siempre: no cierra.
-    assert cierres_con_espera(df, mas_reciente_primero, 0.5, FACTORES) == 0
+    esperas = atendidos_con_espera(df, por_llegada_con_pendientes, 0.5)
+    assert dict(zip(df.loc[esperas.index, "lead_id"], esperas, strict=True)) == {"A": 0, "B": 1}
 
 
 def test_un_lead_que_espera_demasiado_se_pierde() -> None:
     jornadas = [[("VIEJO", 9, 1), ("NUEVO", 0, 0)]] + [[(f"N{i}", 9, 0)] for i in range(8)]
     df = dias_seguidos(*jornadas)
-    # El cupo diario (1) se lo llevan siempre los nuevos de 9 puntos: VIEJO vence sin atenderse.
-    assert cierres_con_espera(df, mas_reciente_primero, 0.5, FACTORES) == 0
+    # El cupo diario (1) se lo llevan siempre los nuevos: VIEJO vence sin atenderse.
+    esperas = atendidos_con_espera(df, mas_reciente_primero, 0.5)
+    assert "VIEJO" not in set(df.loc[esperas.index, "lead_id"])
+
+
+def test_es_simetrico_atender_rapido_suma_aunque_el_lead_no_haya_cerrado() -> None:
+    # Dos leads iguales que no cerraron: atender uno el mismo día vale más que atenderlo tarde.
+    base = pd.Series({0: 0.2, 1: 0.2})
+    rapido = cierres_esperados(pd.Series({0: 0}), base, FACTORES, efecto=1.0)
+    tarde = cierres_esperados(pd.Series({1: 3}), base, FACTORES, efecto=1.0)
+    assert rapido == pytest.approx(0.2) and tarde == pytest.approx(0.1)
+
+
+def test_sin_efecto_causal_la_espera_no_cambia_nada() -> None:
+    base = pd.Series({0: 0.2})
+    assert cierres_esperados(pd.Series({0: 5}), base, FACTORES, efecto=0.0) == pytest.approx(0.2)
+
+
+def historico_temperaturas() -> pd.DataFrame:
+    """Dos Caliente (uno esperó 2 días) y dos Frío, con sus cierres."""
+    return pd.DataFrame({
+        "temperatura": ["Caliente", "Caliente", "Frío", "Frío"],
+        "horas_al_primer_contacto": [2, 50, 3, 4],
+        "cerrado": [1, 0, 1, 0],
+    })  # fmt: skip
+
+
+def test_la_base_sin_efecto_causal_es_la_tasa_de_la_temperatura() -> None:
+    base = probabilidad_base(historico_temperaturas(), FACTORES, efecto=0.0)
+    assert list(base) == pytest.approx([0.5, 0.5, 0.5, 0.5])
+
+
+def test_la_base_reproduce_los_cierres_observados_con_las_esperas_reales() -> None:
+    # Con efecto total, el Caliente que esperó 2 días conservaba la mitad: la base sube para que
+    # la suma con esas esperas dé el cierre que hubo (1).
+    df = historico_temperaturas()
+    base = probabilidad_base(df, FACTORES, efecto=1.0)
+    assert base.iloc[0] == pytest.approx(1 / 1.5)
+    reales = pd.Series([0, 2], index=[0, 1])
+    assert cierres_esperados(reales, base, FACTORES, efecto=1.0) == pytest.approx(1.0)
 
 
 def test_la_urgencia_adelanta_lo_fresco_a_igual_calidad() -> None:

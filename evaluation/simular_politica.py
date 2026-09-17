@@ -8,11 +8,17 @@ política:
 
 1. **Sin decaimiento.** El desenlace es propiedad del lead, no del momento en que se atendió: si
    entra en el cupo del día, cierra como cerró; si queda fuera, se pierde.
-2. **Con decaimiento por espera.** El histórico lo contradice: quien recibe respuesta en menos de
-   24 h cierra bastante más que quien espera días. Aquí un lead que queda fuera del cupo **no se
-   pierde**: pasa al día siguiente, y cada día de espera multiplica su probabilidad de cierre por
-   la tasa observada con esa espera sobre la tasa con menos de 24 h. Después de
-   `DIAS_MAXIMOS_DE_ESPERA` (lo máximo que el histórico observa) se da por perdido.
+2. **Con espera.** Un lead que queda fuera del cupo **no se pierde**: pasa al día siguiente, y
+   después de `DIAS_MAXIMOS_DE_ESPERA` (lo máximo que el histórico observa) se da por perdido.
+   Este escenario es **simétrico**: no usa el desenlace de cada lead, que ya trae incorporada la
+   espera que tuvo. Cada lead tiene una probabilidad base —la tasa de cierre de su temperatura
+   entre los leads contactados en menos de 24 h— que la espera reduce. Atender rápido a un lead
+   que en la realidad no cerró también suma.
+
+   **El efecto de la espera es observacional, no causal.** Quien recibe respuesta en menos de 24 h
+   cierra más, pero quizá porque se contesta antes a los mejores leads. Por eso se reporta con tres
+   supuestos: que nada de esa diferencia es causa de la espera (0 %), que lo es la mitad (50 %) o
+   toda (100 %). La cifra real está en ese rango, no en uno de sus extremos.
 
 Aclaraciones:
 
@@ -26,6 +32,9 @@ Aclaraciones:
    pendientes cualquier política fresca gana mucho, porque ese orden atiende siempre lo más viejo.
 4. La política completa suma la urgencia del componente C calculada con `pipeline/scoring.py`.
    El componente B no entra: el histórico no tiene conversaciones.
+5. La probabilidad base es por temperatura y no por puntaje exacto: los grupos de 7 a 9 puntos
+   tienen pocas decenas de leads y sus tasas no son monótonas. Eso subestima lo que aporta ordenar
+   dentro de una misma temperatura, y sale del mismo histórico que definió el puntaje.
 
 Uso: `uv run python -m pipeline simulate-policy`
 """
@@ -60,6 +69,8 @@ DIAS_DEL_MES = 30
 DIAS_MAXIMOS_DE_ESPERA = 5
 # Sin hora en el histórico, un lead del día se toma a mitad de jornada.
 HORAS_DEL_DIA_DE_LLEGADA = 12
+# Qué parte de la diferencia de cierre por espera se supone causada por la espera.
+EFECTOS_CAUSALES = (0.0, 0.5, 1.0)
 
 
 def dias_de(df: pd.DataFrame) -> list[pd.DataFrame]:
@@ -135,30 +146,52 @@ def factores_de_espera(df: pd.DataFrame) -> dict[int, float]:
     return factores
 
 
-def cierres_con_espera(
-    df: pd.DataFrame,
-    ordenar: Callable[[pd.DataFrame], pd.DataFrame],
-    fraccion: float,
-    factores: dict[int, float],
-) -> float:
-    """Cierres esperados si lo que no cabe hoy pasa a mañana, perdiendo probabilidad cada día.
+def probabilidad_base(df: pd.DataFrame, factores: dict[int, float], efecto: float) -> pd.Series:
+    """Probabilidad de cierre de cada lead si se atiende el mismo día, según su temperatura.
 
-    El cupo de cada día es el mismo del escenario sin decaimiento (una fracción de lo que llegó ese
-    día), pero se reparte entre lo nuevo y lo pendiente según la política.
+    No usa el desenlace del propio lead, así que atenderlo antes puede sumar aunque en la realidad
+    no cerró. Se calibra con el supuesto causal: es la que, con las esperas que de verdad tuvo cada
+    lead, reproduce los cierres observados de su temperatura. Con efecto 0 es la tasa promedio; con
+    efecto 1 se le devuelve lo que la espera observada le habría quitado.
+    """
+    dias_reales = (df["horas_al_primer_contacto"] // 24).astype(int).clip(0, DIAS_MAXIMOS_DE_ESPERA)
+    df = df.assign(_conserva=conserva(dias_reales, factores, efecto))
+    grupos = df.groupby("temperatura")
+    return df["temperatura"].map(grupos["cerrado"].sum() / grupos["_conserva"].sum())
+
+
+def conserva(dias: pd.Series, factores: dict[int, float], efecto: float) -> pd.Series:
+    """Qué parte de su probabilidad conserva cada lead tras esperar, con `efecto` causal (0 a 1)."""
+    return dias.map(lambda d: 1 - efecto * (1 - factores[d]))
+
+
+def atendidos_con_espera(
+    df: pd.DataFrame, ordenar: Callable[[pd.DataFrame], pd.DataFrame], fraccion: float
+) -> pd.Series:
+    """Días que esperó cada lead atendido, si lo que no cabe hoy pasa a mañana.
+
+    El cupo de cada día es el mismo del escenario sin espera (una fracción de lo que llegó ese
+    día), pero se reparte entre lo nuevo y lo pendiente según la política. Qué se atiende no
+    depende del supuesto causal, así que se calcula una sola vez por política y capacidad.
     """
     fechas = pd.to_datetime(df["fecha_registro"])
     pendientes = df.iloc[0:0]
-    total = 0.0
+    esperas = []
     for dia in sorted(fechas.unique()):
-        nuevos = df[fechas == dia]
-        cola = pd.concat([pendientes, nuevos])
+        cola = pd.concat([pendientes, df[fechas == dia]])
         espera = (dia - pd.to_datetime(cola["fecha_registro"])).dt.days
         cola = cola[espera <= DIAS_MAXIMOS_DE_ESPERA]  # los demás ya se perdieron
-        atendidos = ordenar(cola).head(cupo(len(nuevos), fraccion))
-        dias_esperados = (dia - pd.to_datetime(atendidos["fecha_registro"])).dt.days
-        total += float((atendidos["cerrado"] * dias_esperados.map(factores)).sum())
+        atendidos = ordenar(cola).head(cupo(int((fechas == dia).sum()), fraccion))
+        esperas.append((dia - pd.to_datetime(atendidos["fecha_registro"])).dt.days)
         pendientes = cola.drop(atendidos.index)
-    return total
+    return pd.concat(esperas) if esperas else pd.Series(dtype=int)
+
+
+def cierres_esperados(
+    esperas: pd.Series, base: pd.Series, factores: dict[int, float], efecto: float
+) -> float:
+    """Suma de probabilidades de los atendidos, con `efecto` de la caída por espera como causal."""
+    return float((base.loc[esperas.index] * conserva(esperas, factores, efecto)).sum())
 
 
 def por_llegada_con_pendientes(cola: pd.DataFrame) -> pd.DataFrame:
@@ -193,28 +226,41 @@ def mas_reciente_primero(cola: pd.DataFrame) -> pd.DataFrame:
 
 
 def tabla_con_espera(df: pd.DataFrame, factores: dict[int, float]) -> str:
-    """Cierres esperados por política y capacidad, con decaimiento por espera.
+    """Cierres esperados por supuesto causal, capacidad y política.
 
     «Más reciente primero» separa los dos efectos: lo que gana frente a la llegada es atender fresco;
     lo que el puntaje gana frente a ella es el orden por calidad.
     """
+    politicas = {
+        "llegada": por_llegada_con_pendientes,
+        "reciente": mas_reciente_primero,
+        "calidad": por_puntaje_con_pendientes,
+        "completo": por_puntaje_con_urgencia,
+    }
+    esperas = {
+        (nombre, fraccion): atendidos_con_espera(df, ordenar, fraccion)
+        for nombre, ordenar in politicas.items()
+        for fraccion in CAPACIDADES
+    }
     lineas = [
-        "| Capacidad diaria | Orden de llegada | Más reciente primero | Solo calidad (A) "
-        "| **Calidad + urgencia (A + C)** | Ganancia sobre el más reciente |",
-        "|---|---|---|---|---|---|",
+        "| Efecto causal de la espera | Capacidad diaria | Orden de llegada | Más reciente primero "
+        "| Solo calidad (A) | **Calidad + urgencia (A + C)** | Ganancia sobre el más reciente |",
+        "|---|---|---|---|---|---|---|",
     ]
-    for fraccion in CAPACIDADES:
-        llegada = cierres_con_espera(df, por_llegada_con_pendientes, fraccion, factores)
-        reciente = cierres_con_espera(df, mas_reciente_primero, fraccion, factores)
-        calidad = cierres_con_espera(df, por_puntaje_con_pendientes, fraccion, factores)
-        completo = cierres_con_espera(df, por_puntaje_con_urgencia, fraccion, factores)
-        ganancia = completo - reciente
-        lineas.append(
-            f"| {fraccion * 100:.0f} % de la demanda | {coma(llegada, 1)} | {coma(reciente, 1)} "
-            f"| {coma(calidad, 1)} | **{coma(completo, 1)}** "
-            f"| {'+' if ganancia >= 0 else ''}{coma(ganancia, 1)} "
-            f"({coma(ganancia / reciente * 100, 1)} %) |"
-        )
+    for efecto in EFECTOS_CAUSALES:
+        base = probabilidad_base(df, factores, efecto)
+        for fraccion in CAPACIDADES:
+            c = {
+                nombre: cierres_esperados(esperas[(nombre, fraccion)], base, factores, efecto)
+                for nombre in politicas
+            }
+            ganancia = c["completo"] - c["reciente"]
+            lineas.append(
+                f"| {efecto * 100:.0f} % | {fraccion * 100:.0f} % de la demanda "
+                f"| {coma(c['llegada'], 1)} | {coma(c['reciente'], 1)} | {coma(c['calidad'], 1)} "
+                f"| **{coma(c['completo'], 1)}** | {'+' if ganancia >= 0 else ''}{coma(ganancia, 1)} "
+                f"({coma(ganancia / c['reciente'] * 100, 1)} %) |"
+            )
     return "\n".join(lineas)
 
 
@@ -259,17 +305,18 @@ def main() -> int:
     )
 
     factores = factores_de_espera(historico)
-    print("\n### Con decaimiento por espera\n")
+    print("\n### Con espera: simétrico y con supuesto causal explícito\n")
     print(
-        "Lo que no cabe hoy pasa a mañana. Probabilidad de cierre que conserva un lead según los "
-        "días que esperó: "
+        f"Lo que no cabe hoy pasa a mañana; después de {DIAS_MAXIMOS_DE_ESPERA} días se pierde. "
+        "Caída observada según los días de espera: "
         + ", ".join(f"{dia} d → {coma(f * 100, 0)} %" for dia, f in factores.items())
-        + f". Después de {DIAS_MAXIMOS_DE_ESPERA} días se pierde.\n"
+        + ". Con efecto causal x, un lead conserva 1 − x · (1 − caída). La probabilidad base de "
+        "cada temperatura se calibra para que, con las esperas reales, dé los cierres observados.\n"
     )
     print(tabla_con_espera(historico, factores))
     print(
-        "\nCon decaimiento, casi toda la distancia contra el orden de llegada es por atender fresco; "
-        "lo que el puntaje agrega es la última columna."
+        "\nEl efecto de la espera es observacional: la cifra defendible es el rango entre 0 % y "
+        "100 %, no uno de sus extremos."
     )
     return 0
 
