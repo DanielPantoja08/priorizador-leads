@@ -134,17 +134,17 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
   - El aislamiento se prueba en la base, no en la interfaz: la app usa la llave anónima y el JWT.
   - La consolidación no se reescribe en SQL: una sola implementación, la de `consolidar.py`.
   - `orden` es por asesor (la vista de empresa muestra el asesor). La contraseña demo no se teclea.
-- **Revisión contra el enunciado**: `docs/arquitectura.md`, README con supuestos y API, 40 asesores
-  y 3 gerentes, frase de apertura sin LLM. `eval-robustness`: 97 frases fijas; reformuladas, reglas
-  99,4 → 87,2 %, Gemini 97,5–98,6 % (revisadas por una persona).
+- **Revisión contra el enunciado**: `docs/arquitectura.md`, README con supuestos y API, apertura sin
+  LLM. `eval-robustness` (frases reformuladas): reglas 99,4 → 87,2 %, Gemini 97,5–98,6 %.
 - **Fase F**: repo público, Supabase remoto (sa-east-1, pooler 5432), app en Streamlit Cloud.
   Credenciales en `.env.remoto` (ignorado). `setup-uv` exacto. Falta: cron verde y presentación.
-- **Revisión de fallas externas (2026-09-17)**, aplicada en local y remoto. 334 pruebas:
-  - Puntaje **v2**: sin conversación suma `PUNTOS_SIN_CONVERSACION` (valor esperado 2,27 → 2) y
-    es «Sin calificar». Remoto: 142 Caliente, 59 Tibio, 221 Frío, 559 Sin calificar. La versión
-    se ordena por `score.version_numero` (generada; check `^v[1-9][0-9]*$`), nunca como texto.
-  - Validación **parcial** (pesos vistos en la prueba); razón 2,16 con IC 1,01–4,36: «indicio».
-  - `simulate-policy` con decaimiento: A + urgencia +7,1 % sobre «más reciente primero» (70 %).
-  - Evidencia del LLM comprobada contra el cliente (`extract/evidencia.py`): 10 sin respaldo.
-  - RLS: el asesor solo ve sus clientes asignados (`privado.clientes_asignados()`, `security definer`).
+- **Revisión de fallas externas (2026-09-17)**, aplicada en local y remoto. 360 pruebas:
+  - Puntaje **v3**: cada estado vale lo que dice el histórico (`ESTADOS_QUE_PUNTUAN`: forma de pago
+    «no informa» +1, cuota «no informa» 0); sin chat, valor esperado 2,47 → 2 y «Sin calificar».
+    Remoto: 142 Caliente, 61 Tibio, 219 Frío, 559 Sin calificar. `docs/EDA.md` conserva v1.
+  - Versión por `score.version_numero` (check `^v[1-9][0-9]*$`). Validación parcial: 2,68 (IC 1,43–5,48).
+  - `simulate-policy` simétrico, efecto causal 0/50/100 %: A + urgencia +15 a +17 sobre «reciente».
+  - Evidencia (`extract/evidencia.py`): «no respondió» puede citar al asesor; se toleran encabezado
+    y erratas. Sin respaldo → campo desconocido (`como_desconocidos`), razón de 0 puntos. Remoto: 4.
+  - RLS: el asesor ve sus clientes asignados en la **última fecha de corte** (`privado.*`, definer).
   - `ci.yml` aparte; `pipeline.yml` también en push a `data/raw/**` y abre issue si falla.
