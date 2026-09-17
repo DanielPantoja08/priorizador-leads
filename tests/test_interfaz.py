@@ -67,8 +67,11 @@ def test_el_asesor_puede_abrir_el_detalle_de_todos_sus_leads() -> None:
     at.text_input[0].input("asesor.as001@example.com")
     at.text_input[1].input(password)
     at.button[0].click().run()
-    if not at.session_state["sesion_iniciada"]:
-        pytest.skip("No se pudo iniciar sesión en la app: ¿están creados los usuarios de demo?")
+    # Si el acceso falla, la app no crea la clave: sin base local o sin usuarios de demo.
+    if "sesion_iniciada" not in at.session_state:
+        pytest.skip(
+            "No se pudo iniciar sesión en la app: ¿está Supabase local y hay usuarios de demo?"
+        )
     assert not at.exception, at.exception
 
     opciones = selector_de_lead(at).options
