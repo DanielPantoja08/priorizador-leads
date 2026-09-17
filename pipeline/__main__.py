@@ -18,10 +18,23 @@ from pipeline.extract import etapa as etapa_extraccion
 from pipeline.quality import ColectorCalidad
 
 
+def origen_de_la_corrida(evento: str | None, disparador: str | None) -> str:
+    """Qué lanzó la corrida, para `ejecucion.disparador`.
+
+    `schedule` es el cron de GitHub. El cron de Supabase llega como `workflow_dispatch` con la
+    entrada `disparador = supabase_cron`. Todo lo demás (local, botón en GitHub) es `manual`.
+    """
+    if evento == "schedule":
+        return "schedule"
+    if evento == "workflow_dispatch" and disparador == "supabase_cron":
+        return "supabase_cron"
+    return "manual"
+
+
 def ejecutar(fecha_corte: date | None) -> int:
     """Corre todas las etapas disponibles. Devuelve 0 si terminó bien y 1 si hubo un error."""
     config = cargar_config()
-    disparador = "schedule" if os.getenv("GITHUB_EVENT_NAME") == "schedule" else "manual"
+    disparador = origen_de_la_corrida(os.getenv("GITHUB_EVENT_NAME"), os.getenv("DISPARADOR"))
     inicio = time.perf_counter()
     with db.conectar(config.database_url) as conn:
         ejecucion_id = db.abrir_ejecucion(conn, disparador)
