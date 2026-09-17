@@ -1,0 +1,31 @@
+# Integración continua: estilo, pruebas y validación del puntaje en cada cambio del código.
+# Va aparte del pipeline productivo: una prueba rota avisa aquí y no impide publicar la lista del día.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.1.0 # sin etiqueta mayor flotante desde la v8
+      - name: Instalar el entorno bloqueado por uv.lock
+        run: uv sync --frozen
+      - name: Revisar estilo
+        run: uv run ruff check . && uv run ruff format --check .
+      # Sin credenciales de Supabase, las pruebas de aislamiento e interfaz se omiten: el resto no
+      # usa red.
+      - name: Pruebas
+        run: uv run pytest -q
+      # Corre sobre el histórico y los pesos del commit: si un cambio en cualquiera de los dos rompe
+      # el criterio de TRD 9.3, sale con código distinto de cero.
+      - name: Validar el puntaje
+        run: uv run python -m pipeline validate-scoring
