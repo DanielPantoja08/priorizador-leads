@@ -4,9 +4,15 @@ Aplica el **componente A** del puntaje —el único con respaldo histórico— s
 fueron gestionados, y comprueba que la temperatura separe los cierres. Los componentes B y C no se
 validan aquí: el histórico no tiene señales de conversación ni permite reconstruir la espera.
 
-La prueba real es la **temporal**: los pesos se fijaron mirando todo el histórico, así que medirlos
-otra vez sobre esos mismos datos sería optimista. Por eso el criterio de aceptación se exige sobre
-la ventana posterior al corte, que no participó en la decisión de los pesos.
+Dos límites que se declaran siempre con las cifras:
+
+1. **La validación temporal es parcial.** Los pesos se eligieron mirando las tasas de **todo** el
+   histórico (docs/EDA.md, sección 4), ventana de prueba incluida, así que esa ventana no es una
+   muestra que el puntaje no haya visto. Recalcularlos solo con el entrenamiento no mejora la
+   prueba: la regresión sobre el entrenamiento ordena peor en la ventana de prueba.
+2. **La muestra es pequeña.** En la ventana de prueba hay decenas de cierres por temperatura, así
+   que cada tasa va con su intervalo de Wilson y la razón Caliente/Frío con uno por bootstrap. Si
+   ese intervalo incluye el criterio, la razón es un indicio de separación, no un criterio cumplido.
 
 Uso: `uv run python -m pipeline validate-scoring`
 """
@@ -16,6 +22,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_auc_score
 
@@ -23,6 +30,7 @@ RAIZ = Path(__file__).resolve().parent.parent
 if str(RAIZ) not in sys.path:
     sys.path.insert(0, str(RAIZ))
 
+from eda.comun import wilson  # noqa: E402
 from pipeline.ingest import leer_csv  # noqa: E402
 from pipeline.normalize import normalizar_historico  # noqa: E402
 from pipeline.scoring import (  # noqa: E402
@@ -38,6 +46,9 @@ TEMPERATURAS = ("Frío", "Tibio", "Caliente")
 # Los leads que nunca se gestionaron no dicen nada de la calidad del lead: su desenlace refleja
 # que nadie los llamó, no que fueran malos (TRD 9.1).
 SIN_GESTION = "Sin gestión"
+# Semilla fija: el informe tiene que dar lo mismo en cada corrida.
+REMUESTREOS = 5000
+SEMILLA = 2026
 
 
 def preparar(historico: pd.DataFrame) -> pd.DataFrame:
@@ -66,19 +77,30 @@ def tasa(df: pd.DataFrame) -> tuple[int, float]:
     return n, (df["cerrado"].sum() / n if n else float("nan"))
 
 
+def intervalo(df: pd.DataFrame) -> str:
+    """Intervalo de Wilson al 95 % de la tasa de cierre del grupo."""
+    if df.empty:
+        return "—"
+    _, bajo, alto = wilson(int(df["cerrado"].sum()), len(df))
+    return f"{coma(bajo * 100, 1)} – {coma(alto * 100, 1)} %"
+
+
 def tabla_temperatura(df: pd.DataFrame) -> str:
     """Tasa de cierre por temperatura, en todo el histórico y en la ventana de prueba."""
     lineas = [
-        "| Temperatura | Tasa (histórico con gestión) | n | Tasa (validación temporal) | n |",
-        "|---|---|---|---|---|",
+        "| Temperatura | Tasa (histórico con gestión) | n | Tasa (ventana de prueba) | IC 95 % | "
+        "Cierres / n |",
+        "|---|---|---|---|---|---|",
     ]
     for etiqueta in TEMPERATURAS:
         grupo = df[df["temperatura"] == etiqueta]
+        prueba = grupo[grupo["prueba"]]
         n_todo, tasa_todo = tasa(grupo)
-        n_prueba, tasa_prueba = tasa(grupo[grupo["prueba"]])
+        n_prueba, tasa_prueba = tasa(prueba)
         lineas.append(
             f"| {etiqueta} | {coma(tasa_todo * 100, 1)} % | {n_todo} "
-            f"| {coma(tasa_prueba * 100, 1)} % | {n_prueba} |"
+            f"| {coma(tasa_prueba * 100, 1)} % | {intervalo(prueba)} "
+            f"| {int(prueba['cerrado'].sum())} / {n_prueba} |"
         )
     return "\n".join(lineas)
 
@@ -88,6 +110,26 @@ def razon_caliente_frio(df: pd.DataFrame) -> float:
     _, caliente = tasa(df[df["temperatura"] == "Caliente"])
     _, frio = tasa(df[df["temperatura"] == "Frío"])
     return caliente / frio if frio else float("nan")
+
+
+def intervalo_razon(
+    df: pd.DataFrame, remuestreos: int = REMUESTREOS, semilla: int = SEMILLA
+) -> tuple[float, float]:
+    """Intervalo al 95 % de la razón Caliente/Frío, por bootstrap de percentiles.
+
+    Remuestrea cada grupo por separado, con reemplazo y su mismo tamaño. Los remuestreos sin
+    cierres en Frío se descartan, porque la razón no está definida.
+    """
+    rng = np.random.default_rng(semilla)
+    caliente = df.loc[df["temperatura"] == "Caliente", "cerrado"].to_numpy()
+    frio = df.loc[df["temperatura"] == "Frío", "cerrado"].to_numpy()
+    if not len(caliente) or not len(frio):
+        return float("nan"), float("nan")
+    tasas_c = rng.choice(caliente, (remuestreos, len(caliente))).mean(axis=1)
+    tasas_f = rng.choice(frio, (remuestreos, len(frio))).mean(axis=1)
+    razones = tasas_c[tasas_f > 0] / tasas_f[tasas_f > 0]
+    bajo, alto = np.percentile(razones, [2.5, 97.5])
+    return float(bajo), float(alto)
 
 
 def main() -> int:
@@ -108,13 +150,25 @@ def main() -> int:
     print("El puntaje ordena, no predice con certeza: un AUC cercano a 0,6 es ordenamiento débil.")
 
     razon = razon_caliente_frio(prueba)
+    bajo, alto = intervalo_razon(prueba)
     cumple = razon >= RAZON_MINIMA_CALIENTE_FRIO
-    veredicto = "CUMPLE" if cumple else "NO CUMPLE"
     print(
         f"\nCriterio de aceptación: Caliente/Frío ≥ {coma(RAZON_MINIMA_CALIENTE_FRIO, 1)} "
         "en la ventana de prueba."
     )
-    print(f"Resultado: {coma(razon)} veces → {veredicto}")
+    print(
+        f"Resultado: {coma(razon)} veces (IC 95 % por bootstrap: {coma(bajo)} a {coma(alto)}) "
+        f"→ {'CUMPLE' if cumple else 'NO CUMPLE'} en el valor puntual."
+    )
+    if bajo <= RAZON_MINIMA_CALIENTE_FRIO:
+        print(
+            "El intervalo incluye el criterio, así que es un **indicio de separación**, no un "
+            "criterio demostrado."
+        )
+    print(
+        "\nLimitación: los pesos se eligieron con todo el histórico, ventana de prueba incluida; "
+        "la validación temporal es parcial."
+    )
     return 0 if cumple else 1
 
 

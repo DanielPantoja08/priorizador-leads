@@ -9,7 +9,7 @@ import pandas as pd
 import pytest
 
 from evaluation.eval_extraction import cargar_referencia, coincide, evaluar, tabla_markdown
-from evaluation.validate_scoring import coma, razon_caliente_frio, tasa
+from evaluation.validate_scoring import coma, intervalo_razon, razon_caliente_frio, tasa
 from pipeline.extract.schema import Extraccion
 
 # --------------------------------------------------------------------------------------
@@ -162,3 +162,15 @@ def test_la_razon_compara_caliente_contra_frio() -> None:
 
 def test_sin_frios_la_razon_no_es_un_numero() -> None:
     assert pd.isna(razon_caliente_frio(marco_cierres(["Caliente"], [1])))
+
+
+def test_el_intervalo_de_la_razon_contiene_la_estimacion_y_es_reproducible() -> None:
+    df = marco_cierres(["Caliente"] * 40 + ["Frío"] * 80, [1] * 10 + [0] * 30 + [1] * 8 + [0] * 72)
+    bajo, alto = intervalo_razon(df)
+    assert bajo < razon_caliente_frio(df) < alto
+    assert intervalo_razon(df) == (bajo, alto)  # la semilla es fija
+
+
+def test_sin_frios_el_intervalo_no_es_un_numero() -> None:
+    bajo, alto = intervalo_razon(marco_cierres(["Caliente"], [1]))
+    assert pd.isna(bajo) and pd.isna(alto)
