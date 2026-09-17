@@ -6,13 +6,19 @@ import pandas as pd
 import pytest
 
 from evaluation.simular_politica import (
+    DIAS_MAXIMOS_DE_ESPERA,
     cierres_al_azar,
     cierres_capturados,
+    cierres_con_espera,
     comparar,
     cupo,
     dias_de,
+    factores_de_espera,
+    mas_reciente_primero,
     por_llegada,
+    por_llegada_con_pendientes,
     por_puntaje,
+    por_puntaje_con_urgencia,
     tabla,
 )
 
@@ -140,3 +146,69 @@ def test_la_tabla_usa_coma_decimal() -> None:
     salida = tabla([fila])
     assert "70 % de la demanda" in salida
     assert "105,5" in salida and "+20" in salida and "20,0 %" in salida
+
+
+# --------------------------------------------------------------------------------------
+# Con decaimiento por espera
+# --------------------------------------------------------------------------------------
+
+
+def contactos(*filas: tuple[float, int]) -> pd.DataFrame:
+    """Histórico mínimo: (horas al primer contacto, cerrado)."""
+    return pd.DataFrame([{"horas_al_primer_contacto": h, "cerrado": c} for h, c in filas])
+
+
+def test_los_factores_salen_de_las_tasas_y_no_crecen_con_la_espera() -> None:
+    # Día 0: 2 de 4 (50 %). Día 1: 1 de 4 (25 %). Día 2: 2 de 4 (50 %), un repunte que no se cree.
+    df = contactos(
+        *[(2, 1), (4, 1), (8, 0), (16, 0)],
+        *[(24, 1), (30, 0), (40, 0), (47, 0)],
+        *[(48, 1), (50, 1), (60, 0), (70, 0)],
+    )
+    factores = factores_de_espera(df)
+    assert factores[0] == 1.0
+    assert factores[1] == pytest.approx(0.5)
+    assert factores[2] == pytest.approx(0.5)  # no sube aunque la tasa del día 2 sea mayor
+    assert set(factores) == set(range(DIAS_MAXIMOS_DE_ESPERA + 1))
+
+
+def dias_seguidos(*jornadas: list[tuple[str, int, int]]) -> pd.DataFrame:
+    """Varias jornadas consecutivas desde el 1 de marzo: cada una, lista de (lead_id, puntos, cerrado)."""
+    return pd.concat(
+        [dia(*leads, fecha=f"2026-03-{i + 1:02d}") for i, leads in enumerate(jornadas)],
+        ignore_index=True,
+    )
+
+
+FACTORES = {0: 1.0, 1: 0.5, 2: 0.5, 3: 0.5, 4: 0.5, 5: 0.5}
+
+
+def test_con_capacidad_para_todos_nadie_espera_y_no_hay_decaimiento() -> None:
+    df = dias_seguidos([("A", 1, 1), ("B", 0, 0)], [("C", 0, 1)])
+    assert cierres_con_espera(df, por_llegada_con_pendientes, 1.0, FACTORES) == 2
+
+
+def test_lo_que_no_cabe_pasa_al_dia_siguiente_y_cierra_con_menos_probabilidad() -> None:
+    # Cupo de 1 por día (50 % de 2). Por llegada, el día 2 se atiende B, que ya esperó un día.
+    df = dias_seguidos([("A", 0, 0), ("B", 0, 1)], [("C", 0, 0), ("D", 0, 0)])
+    assert cierres_con_espera(df, por_llegada_con_pendientes, 0.5, FACTORES) == pytest.approx(0.5)
+    # Lo más reciente primero deja a B esperando para siempre: no cierra.
+    assert cierres_con_espera(df, mas_reciente_primero, 0.5, FACTORES) == 0
+
+
+def test_un_lead_que_espera_demasiado_se_pierde() -> None:
+    jornadas = [[("VIEJO", 9, 1), ("NUEVO", 0, 0)]] + [[(f"N{i}", 9, 0)] for i in range(8)]
+    df = dias_seguidos(*jornadas)
+    # El cupo diario (1) se lo llevan siempre los nuevos de 9 puntos: VIEJO vence sin atenderse.
+    assert cierres_con_espera(df, mas_reciente_primero, 0.5, FACTORES) == 0
+
+
+def test_la_urgencia_adelanta_lo_fresco_a_igual_calidad() -> None:
+    cola = dias_seguidos([("ANTIGUO", 1, 0)], [("FRESCO", 1, 0)])
+    assert list(por_puntaje_con_urgencia(cola)["lead_id"]) == ["FRESCO", "ANTIGUO"]
+
+
+def test_la_calidad_puede_ganarle_a_la_urgencia() -> None:
+    # La urgencia baja de 4 a 2 al pasar un día; 3 puntos de calidad compensan esa diferencia.
+    cola = dias_seguidos([("BUENO", 3, 0)], [("FRESCO", 0, 0)])
+    assert list(por_puntaje_con_urgencia(cola)["lead_id"]) == ["BUENO", "FRESCO"]
