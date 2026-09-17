@@ -1,6 +1,6 @@
 {
-  "revisado": false,
-  "criterio": "Cada frase fija que escriben los clientes en las 40 conversaciones de referencia tiene una sola reformulación con el mismo significado, en el registro de WhatsApp. Solo cambian las palabras: el modelo y las cifras quedan intactos, así que las etiquetas de referencia siguen valiendo. Las propuso la IA sin mirar las expresiones regulares del extractor por reglas; una persona debe revisarlas y cambiar revisado a true.",
+  "revisado": true,
+  "criterio": "Cada frase fija que escriben los clientes en las 40 conversaciones de referencia tiene una sola reformulación con el mismo significado, en el registro de WhatsApp. Solo cambian las palabras: el modelo y las cifras quedan intactos, así que las etiquetas de referencia siguen valiendo. Las propuso la IA sin mirar las expresiones regulares del extractor por reglas, y una persona las revisó.",
   "sustituciones": [
     {"original": "estoy averiguando por la", "reformulada": "cuánto vale la"},
     {"original": "me interesa la", "reformulada": "me tramó la"},
