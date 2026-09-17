@@ -1,4 +1,4 @@
-"""Valida el puntaje v1 contra el histórico de cierres (RF-07, TRD 9.3).
+"""Valida el componente A del puntaje contra el histórico de cierres (RF-07, TRD 9.3).
 
 Aplica el **componente A** del puntaje —el único con respaldo histórico— sobre los leads que sí
 fueron gestionados, y comprueba que la temperatura separe los cierres. Los componentes B y C no se
@@ -38,7 +38,9 @@ from pipeline.scoring import (  # noqa: E402
     CORTE_TEMPORAL,
     PESOS_CALIDAD,
     PRECIO_ALTO,
+    PUNTOS_SIN_CONVERSACION,
     RAZON_MINIMA_CALIENTE_FRIO,
+    SENALES_DE_CONVERSACION,
     VERSION_SCORE,
     temperatura_de,
 )
@@ -130,10 +132,10 @@ def intervalo_razon(
 
 
 def auc_pesos_de_entrenamiento(entrenamiento: pd.DataFrame, prueba: pd.DataFrame) -> float:
-    """AUC en prueba de unos pesos que no vieron la prueba: la alternativa a los pesos v1.
+    """AUC en prueba de unos pesos que no vieron la prueba: la alternativa a los pesos actuales.
 
     Una regresión logística sobre las mismas cuatro señales del componente A, ajustada solo con el
-    entrenamiento. Si ordena peor que v1 en la prueba, recalcular los pesos no aporta.
+    entrenamiento. Si ordena peor que los actuales en la prueba, recalcular los pesos no aporta.
     """
     columnas = list(PESOS_CALIDAD)
     modelo = LogisticRegression().fit(senales(entrenamiento)[columnas], entrenamiento["cerrado"])
@@ -148,6 +150,15 @@ def senales(df: pd.DataFrame) -> pd.DataFrame:
         "precio_alto": df["precio_lista"].ge(PRECIO_ALTO).astype(int),
         "contado": df["forma_pago_declarada"].eq("contado").astype(int),
     })  # fmt: skip
+
+
+def valor_esperado_sin_conversacion(df: pd.DataFrame) -> float:
+    """Lo que suman en promedio cita, cuota y contado: lo que vale un lead al que le falta el chat.
+
+    Es el respaldo de `PUNTOS_SIN_CONVERSACION`, que es este número redondeado.
+    """
+    frecuencias = senales(df)[list(SENALES_DE_CONVERSACION)].mean()
+    return float(sum(PESOS_CALIDAD[clave] * frecuencias[clave] for clave in frecuencias.index))
 
 
 def main() -> int:
@@ -169,6 +180,14 @@ def main() -> int:
     print(
         f"Pesos derivados solo del entrenamiento (regresión logística con las mismas cuatro "
         f"señales): AUC {coma(auc_pesos_de_entrenamiento(entrenamiento, prueba), 3)} en prueba."
+    )
+
+    esperado = valor_esperado_sin_conversacion(df)
+    frecuencias = senales(df)[list(SENALES_DE_CONVERSACION)].mean()
+    detalle = ", ".join(f"{clave} {coma(valor * 100, 1)} %" for clave, valor in frecuencias.items())
+    print(
+        f"\nSin conversación, cita, cuota y contado valen en promedio {coma(esperado)} puntos "
+        f"({detalle}); el puntaje usa {PUNTOS_SIN_CONVERSACION}."
     )
 
     razon = razon_caliente_frio(prueba)

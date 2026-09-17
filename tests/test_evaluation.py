@@ -9,8 +9,18 @@ import pandas as pd
 import pytest
 
 from evaluation.eval_extraction import cargar_referencia, coincide, evaluar, tabla_markdown
-from evaluation.validate_scoring import coma, intervalo_razon, razon_caliente_frio, tasa
+from evaluation.validate_scoring import (
+    coma,
+    intervalo_razon,
+    preparar,
+    razon_caliente_frio,
+    tasa,
+    valor_esperado_sin_conversacion,
+)
 from pipeline.extract.schema import Extraccion
+from pipeline.ingest import leer_csv
+from pipeline.normalize import normalizar_historico
+from pipeline.scoring import PUNTOS_SIN_CONVERSACION
 
 # --------------------------------------------------------------------------------------
 # coincide: cada campo se compara según su tipo
@@ -174,3 +184,9 @@ def test_el_intervalo_de_la_razon_contiene_la_estimacion_y_es_reproducible() -> 
 def test_sin_frios_el_intervalo_no_es_un_numero() -> None:
     bajo, alto = intervalo_razon(marco_cierres(["Caliente"], [1]))
     assert pd.isna(bajo) and pd.isna(alto)
+
+
+def test_los_puntos_sin_conversacion_son_el_valor_esperado_del_historico() -> None:
+    # Si cambia el histórico o un peso, la constante del puntaje tiene que cambiar con él.
+    historico = preparar(normalizar_historico(leer_csv("historico_cierres.csv")))
+    assert round(valor_esperado_sin_conversacion(historico)) == PUNTOS_SIN_CONVERSACION
