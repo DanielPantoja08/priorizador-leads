@@ -311,9 +311,9 @@ El código es el mismo que en local; solo cambian las variables (TRD 11.3).
 
 | Pieza | Dónde | Cómo |
 |---|---|---|
-| Base | Supabase remoto, São Paulo | `supabase link` y `supabase db push --include-seed` |
-| Pipeline | [GitHub Actions](.github/workflows/pipeline.yml) | Todos los días a las 06:00 de Bogotá, cuando cambian los insumos de `data/raw/` y a mano (`workflow_dispatch`, con fecha y extractor) |
-| CI | [GitHub Actions](.github/workflows/ci.yml) | En cada push y pull request: `ruff`, `pytest` y `validate-scoring` |
+| Base | Supabase remoto, São Paulo | `supabase link` y `supabase db push --include-seed`. Las migraciones se aplican a mano (`--dry-run` antes) |
+| Pipeline | [GitHub Actions](.github/workflows/pipeline.yml) | Todos los días a las 06:00 de Bogotá, cuando cambian los insumos de `data/raw/` y a mano (`workflow_dispatch`, con fecha y extractor). Antes de correr, `check-migrations`: si la base no tiene las migraciones del repositorio, se detiene y abre un issue |
+| CI | [GitHub Actions](.github/workflows/ci.yml) | En cada push y pull request: `ruff`, `pytest` y `validate-scoring`. En los push, además, `check-migrations` contra la base remota: un cambio de esquema sin `db push` deja el CI en rojo |
 | App | Streamlit Community Cloud | `app/streamlit_app.py`, Python 3.12, dependencias de `app/requirements.txt` |
 
 Son dos workflows a propósito: una prueba rota avisa en CI y no impide publicar la lista del día.

@@ -138,13 +138,13 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
   LLM. `eval-robustness` (frases reformuladas): reglas 99,4 → 87,2 %, Gemini 97,5–98,6 %.
 - **Fase F**: repo público, Supabase remoto (sa-east-1, pooler 5432), app en Streamlit Cloud.
   Credenciales en `.env.remoto` (ignorado). `setup-uv` exacto. Falta: cron verde y presentación.
-- **Revisión de fallas externas (2026-09-17)**, aplicada en local y remoto. 360 pruebas:
+- **Revisión de fallas externas (2026-09-17)**, aplicada en local y remoto. 364 pruebas:
   - Puntaje **v3**: cada estado vale lo que dice el histórico (`ESTADOS_QUE_PUNTUAN`: forma de pago
     «no informa» +1, cuota «no informa» 0); sin chat, valor esperado 2,47 → 2 y «Sin calificar».
     Remoto: 142 Caliente, 61 Tibio, 219 Frío, 559 Sin calificar. `docs/EDA.md` conserva v1.
   - Versión por `score.version_numero` (check `^v[1-9][0-9]*$`). Validación parcial: 2,68 (IC 1,43–5,48).
   - `simulate-policy` simétrico, efecto causal 0/50/100 %: A + urgencia +15 a +17 sobre «reciente».
-  - Evidencia (`extract/evidencia.py`): «no respondió» puede citar al asesor; se toleran encabezado
-    y erratas. Sin respaldo → campo desconocido (`como_desconocidos`), razón de 0 puntos. Remoto: 4.
+  - Evidencia sin cita (`extract/evidencia.py`, erratas sí, paráfrasis no) → desconocido. Remoto: 4.
   - RLS: el asesor ve sus clientes asignados en la **última fecha de corte** (`privado.*`, definer).
-  - `ci.yml` aparte; `pipeline.yml` también en push a `data/raw/**` y abre issue si falla.
+  - `ci.yml` aparte; `pipeline.yml` también en push a `data/raw/**`, abre issue si falla. Migraciones a
+    mano; `check-migrations` (CI y pipeline) falla si remoto no las tiene. PRD/TRD/EDA: nota de v1.
