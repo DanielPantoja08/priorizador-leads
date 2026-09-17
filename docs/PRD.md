@@ -4,6 +4,8 @@
 **Versión:** 1.3 · **Estado:** Aprobado para desarrollo · **Fecha:** septiembre de 2026
 **Documentos complementarios:** [TRD.md](./TRD.md) (cómo se construye) · [EDA.md](./EDA.md) (evidencia de los datos, se genera en la Fase A)
 
+> **Nota de versión del puntaje.** Las cifras de puntaje y temperatura de este documento son del puntaje **v1**, con el que se diseñó. La app y el pipeline usan hoy **v3** (cada estado de una señal vale lo que dice el histórico; los leads sin conversación quedan «Sin calificar»). Las cifras vigentes están en el [README](../README.md) y se reproducen con `uv run python -m pipeline validate-scoring`.
+
 **Cambios frente a la versión 1.2**
 - La lista diaria incluye todos los leads abiertos. Los que quedan sin cupo se marcan como **prioritarios** si son Caliente o si llevan menos de 24 h sin contacto (HU-04).
 

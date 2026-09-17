@@ -2,6 +2,10 @@
 
 > Documento generado con `uv run python -m eda` a partir de `data/raw/`. **No se edita a mano.**
 > Las cifras de este documento salen del código de `eda/`; dos ejecuciones producen el mismo resultado.
+>
+> **Nota de versión del puntaje.** El puntaje y la temperatura que se analizan aquí son los de **v1**,
+> que es lo que citan el PRD y el TRD. La app usa hoy **v3**; sus cifras están en el README y en
+> `uv run python -m pipeline validate-scoring`.
 
 ## Resumen
 

@@ -3,6 +3,8 @@
 **Versión:** 1.3 · **Documentos complementarios:** [PRD.md](./PRD.md) (qué y por qué) · [EDA.md](./EDA.md) (evidencia de los datos, se genera en la Fase A)
 **Convención:** los identificadores RF y RNF remiten a los requisitos del PRD.
 
+> **Nota de versión del puntaje.** Las cifras de puntaje y temperatura de este documento (sección 9) son del puntaje **v1**, con el que se diseñó. La app y el pipeline usan hoy **v3** (cada estado de una señal vale lo que dice el histórico; los leads sin conversación quedan «Sin calificar»; un campo sin evidencia en el chat se toma como desconocido). Los pesos vigentes viven en `pipeline/scoring.py`, y las cifras en el [README](../README.md) y en `uv run python -m pipeline validate-scoring`.
+
 **Cambios frente a la versión 1.2 (decisiones del punto de control A)**
 - **Sección 10:** los leads sin cupo se siguen asignando solo por capacidad, pero se marcan como `prioritario` si son Caliente o si llevan menos de 24 h sin contacto. El tablero del gerente los muestra primero.
 - **Sección 6.1:** nueva bandera `conversacion_antes_de_registro`.
