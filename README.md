@@ -98,8 +98,14 @@ entrenamiento (regresión logística con las mismas señales) ordenan casi igual
 Un Caliente cierra **2,68 veces** más que un Frío, con un intervalo al 95 % (bootstrap) de **1,43 a
 5,48**. El criterio de aceptación era 1,8 y queda dentro del intervalo: es un **indicio de
 separación, no un criterio demostrado**, con 33 cierres entre los dos grupos. El AUC es 0,579 en
-entrenamiento y 0,618 en prueba: **el puntaje ordena, no predice con certeza.** (Con v1 eran 2,16
-veces y AUC 0,602; `docs/EDA.md` conserva v1 porque es lo que citan el PRD y el TRD.)
+entrenamiento y 0,618 en prueba: **el puntaje ordena, no predice con certeza.**
+
+Con v1 eran 2,16 veces y AUC 0,602 (`docs/EDA.md` conserva v1 porque es lo que citan el PRD y el
+TRD). **Esa subida no es una mejora demostrada**: v2 y v3 se diseñaron mirando el histórico
+completo, ventana de prueba incluida, así que la prueba ya no es independiente de la elección. Y el
+intervalo de v3 (1,43 a 5,48) contiene a 2,16. Lo que se puede afirmar es que, en la misma ventana, v3
+no ordena peor que v1 y aplica una regla más coherente; confirmar una mejora exige datos
+posteriores al diseño.
 
 ### Cuántos cierres más son (`uv run python -m pipeline simulate-policy`)
 
@@ -390,7 +396,7 @@ Cada fila dice qué se eligió, qué se descartó y por qué. El detalle está e
 | **Caché por contenido, extractor y versión del prompt** | Volver a extraer en cada corrida | La segunda corrida no hace peticiones; cambiar el prompt sube la versión e invalida la caché sin borrarla |
 | **Etiquetas de referencia propuestas por la IA y revisadas por una persona** | Etiquetar a mano las 40 conversaciones | Cabía en el tiempo del ejercicio; se declara siempre así, nunca como etiquetado manual |
 | **Frase de apertura con plantilla** | Generarla con el modelo | No gasta cuota, siempre sale igual y no puede inventar datos |
-| **Comprobar la evidencia del modelo** contra la conversación, y tomar como desconocido lo que no tiene cita | Mostrarla tal como llega, o solo ocultarla | Un campo sin respaldo no debe mover el puntaje. Se toleran el encabezado «asesor [hora]:» y las erratas de copia; «no respondió» puede citar al asesor |
+| **Comprobar la evidencia del modelo** contra la conversación, y tomar como desconocido lo que no tiene cita | Mostrarla tal como llega, o solo ocultarla | Un campo sin respaldo no cuenta como dicho: puntúa como su estado desconocido (una forma de pago «crédito» sin cita vuelve a «no informa» y suma +1, como en el histórico). Se toleran el encabezado «asesor [hora]:» y las erratas de copia (parecido ≥ 0,9), no las paráfrasis: la app la muestra como cita textual, y juzgar si otras palabras dicen lo mismo es el juicio del modelo que se quiere comprobar. «No respondió» puede citar al asesor |
 
 ### Automatización y publicación
 
