@@ -48,6 +48,10 @@ jobs:
       - uses: astral-sh/setup-uv@v10.1.0 # sin etiqueta mayor flotante desde la v8
       - name: Instalar el entorno bloqueado por uv.lock
         run: uv sync --frozen
+      # Las migraciones se aplican a mano: si el código trae una que la base no tiene, la corrida se
+      # detiene aquí en vez de escribir con un esquema viejo (y el paso de aviso abre el issue).
+      - name: Comprobar que la base tiene las migraciones del repositorio
+        run: uv run python -m pipeline check-migrations
       - name: Correr el pipeline
         run: uv run python -m pipeline run
       # Si el Gemini falla, la corrida termina con el respaldo por reglas y no llega aquí: esto es

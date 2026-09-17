@@ -29,3 +29,11 @@ jobs:
       # el criterio de TRD 9.3, sale con código distinto de cero.
       - name: Validar el puntaje
         run: uv run python -m pipeline validate-scoring
+      # Un cambio de esquema subido sin `supabase db push` deja el CI en rojo hasta aplicarlo. La
+      # credencial va solo en este paso, para que las pruebas no se conecten a la base remota. En un
+      # pull request desde un fork no hay secretos, así que corre solo en los push.
+      - name: Comprobar migraciones en la base remota
+        if: github.event_name == 'push'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: uv run python -m pipeline check-migrations
