@@ -137,8 +137,8 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
 - **Revisión contra el enunciado**: `docs/arquitectura.md`, README con supuestos y API, apertura sin
   LLM. `eval-robustness` (frases reformuladas): reglas 99,4 → 87,2 %, Gemini 97,5–98,6 %.
 - **Fase F**: repo público, Supabase remoto (sa-east-1, pooler 5432), app en Streamlit Cloud.
-  Credenciales en `.env.remoto` (ignorado). `setup-uv` exacto. Falta: cron verde y presentación.
-- **Revisión de fallas externas (2026-09-17)**, aplicada en local y remoto. 364 pruebas:
+  Credenciales en `.env.remoto` (ignorado). `setup-uv` exacto. Falta: presentación.
+- **Revisión de fallas externas (2026-09-17)**, aplicada en local y remoto. 375 pruebas:
   - Puntaje **v3**: cada estado vale lo que dice el histórico (`ESTADOS_QUE_PUNTUAN`: forma de pago
     «no informa» +1, cuota «no informa» 0); sin chat, valor esperado 2,47 → 2 y «Sin calificar».
     Remoto: 142 Caliente, 61 Tibio, 219 Frío, 559 Sin calificar. `docs/EDA.md` conserva v1.
@@ -146,5 +146,5 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
   - `simulate-policy` simétrico, efecto causal 0/50/100 %: A + urgencia +15 a +17 sobre «reciente».
   - Evidencia sin cita (`extract/evidencia.py`, erratas sí, paráfrasis no) → desconocido. Remoto: 4.
   - RLS: el asesor ve sus clientes asignados en la **última fecha de corte** (`privado.*`, definer).
-  - `ci.yml` aparte; `pipeline.yml` también en push a `data/raw/**`, abre issue si falla. Migraciones a
-    mano; `check-migrations` (CI y pipeline) falla si remoto no las tiene. PRD/TRD/EDA: nota de v1.
+  - `ci.yml` aparte; `check-migrations` en CI y pipeline. PRD/TRD/EDA: nota de v1. El cron de GitHub no
+    disparó: pg_cron (Supabase) lanza el workflow a las 06:17, token en Vault; GitHub de respaldo 06:47.

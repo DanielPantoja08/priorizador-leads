@@ -312,7 +312,7 @@ El código es el mismo que en local; solo cambian las variables (TRD 11.3).
 | Pieza | Dónde | Cómo |
 |---|---|---|
 | Base | Supabase remoto, São Paulo | `supabase link` y `supabase db push --include-seed`. Las migraciones se aplican a mano (`--dry-run` antes) |
-| Pipeline | [GitHub Actions](.github/workflows/pipeline.yml) | Todos los días a las 06:00 de Bogotá, cuando cambian los insumos de `data/raw/` y a mano (`workflow_dispatch`, con fecha y extractor). Antes de correr, `check-migrations`: si la base no tiene las migraciones del repositorio, se detiene y abre un issue |
+| Pipeline | [GitHub Actions](.github/workflows/pipeline.yml) | Todos los días a las 06:17 de Bogotá lo lanza **pg_cron en Supabase** (llama a `workflow_dispatch` con un token de GitHub guardado en Vault); el cron de GitHub queda de respaldo a las 06:47. También corre cuando cambian los insumos de `data/raw/` y a mano (con fecha y extractor). `ejecucion.disparador` registra `supabase_cron`, `schedule` o `manual`. Antes de correr, `check-migrations`: si la base no tiene las migraciones del repositorio, se detiene y abre un issue |
 | CI | [GitHub Actions](.github/workflows/ci.yml) | En cada push y pull request: `ruff`, `pytest` y `validate-scoring`. En los push, además, `check-migrations` contra la base remota: un cambio de esquema sin `db push` deja el CI en rojo |
 | App | Streamlit Community Cloud | `app/streamlit_app.py`, Python 3.12, dependencias de `app/requirements.txt` |
 
@@ -321,6 +321,14 @@ CI instala con `uv sync --frozen`, pasa `ruff` y `pytest` y termina con `validat
 si un cambio en el histórico o en los pesos rompe el criterio. El pipeline solo corre
 `pipeline run` y, si falla, abre un issue con el enlace a la corrida. Con los insumos estáticos de
 este ejercicio el cron produce cada día la misma lista: es la idempotencia esperada, no un defecto.
+
+El disparo diario sale de la base y no del cron de GitHub porque este no garantiza la hora: el
+2026-09-17 no disparó ni a las 06:00, ni a las 10:37, ni a las 12:07 de Bogotá, aun con el workflow
+reactivado. pg_cron corre dentro de Postgres y usa pg_net para pedir la corrida a GitHub; la
+respuesta queda en `net._http_response` (204 si la aceptó). El token es fine-grained, solo para este
+repositorio y con permiso de Actions; vive en Supabase Vault (`github_token_pipeline`) y la función
+`privado.disparar_pipeline()` no la puede ejecutar ni la app ni la API. **El token vence**: si expira,
+la llamada falla y queda el cron de GitHub de respaldo, así que hay que renovarlo.
 Secretos: `DATABASE_URL`
 (por el *session pooler*, puerto 5432: el *transaction pooler* no admite las sentencias preparadas
 de psycopg) y `GEMINI_API_KEY`. La app solo recibe `SUPABASE_URL` y `SUPABASE_ANON_KEY`.
@@ -403,6 +411,7 @@ Cada fila dice qué se eligió, qué se descartó y por qué. El detalle está e
 | Decisión | Alternativa descartada | Por qué |
 |---|---|---|
 | **Un solo comando** (`pipeline run`) y **GitHub Actions** con cron, disparo por insumos nuevos y manual | Un orquestador aparte (Airflow, un servidor) | Es gratis, vive junto al código y corre el mismo comando que en local |
+| **Disparo diario desde Supabase** (pg_cron + pg_net → `workflow_dispatch`), cron de GitHub de respaldo | Solo el cron de GitHub, o un programador externo (cron-job.org) | El cron de GitHub no disparó en tres horarios seguidos; pg_cron ya está en la base, no suma proveedor y el token queda en Vault |
 | **CI separado del pipeline productivo** | Pruebas dentro del mismo job | Una prueba rota no deja a los asesores sin lista |
 | **Streamlit Community Cloud** | Un frontend aparte (React en Vercel) | Todo en Python y publicación directa desde el repositorio |
 | **uv con `uv.lock`**; `app/requirements.txt` exportado desde el lock | `pip` con `requirements.txt` editado a mano | El entorno es el mismo en local, en CI y en la nube |
