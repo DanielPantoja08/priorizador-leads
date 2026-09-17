@@ -14,6 +14,7 @@ from pipeline.catalog_match import Catalogo
 from pipeline.config import Config
 from pipeline.extract.base import Extractor, extraer_con_cache
 from pipeline.extract.consolidar import Senales, consolidar
+from pipeline.extract.evidencia import campos_sin_respaldo
 from pipeline.extract.gemini import ExtractorGemini
 from pipeline.extract.rules import ExtractorReglas
 from pipeline.extract.schema import validar
@@ -74,7 +75,7 @@ def ejecutar(
     empresas = dict(zip(leads["lead_id"], leads["empresa_id"], strict=True))
     modelo_llm = getattr(extractor, "modelo", None)
 
-    filas, por_conversacion = [], {}
+    filas, por_conversacion, sin_respaldo = [], {}, 0
     for conversacion, extraccion in zip(conversaciones, extracciones, strict=True):
         conversacion_id = conversacion["conversacion_id"]
         empresa = empresas.get(conversacion["lead_id"])  # None en las huérfanas
@@ -85,6 +86,11 @@ def ejecutar(
         validada, correcciones = validar(extraccion, precios.get(sku))
         for tipo in correcciones:
             colector.registrar(ARCHIVO_CONVERSACIONES, conversacion_id, "cuota_inicial_cop", tipo, extraccion.cuota_inicial_cop, "valor corregido por la validación", empresa)  # fmt: skip
+        # Igual con la evidencia: se comprueba siempre y la base guarda la que dio el extractor.
+        textos_cliente = [m["texto"] for m in conversacion["mensajes"] if m["emisor"] == "cliente"]
+        for campo in campos_sin_respaldo(extraccion.evidencia, textos_cliente):
+            sin_respaldo += 1
+            colector.registrar(ARCHIVO_CONVERSACIONES, conversacion_id, f"evidencia.{campo}", "evidencia_sin_respaldo", extraccion.evidencia[campo], "no se muestra como cita", empresa)  # fmt: skip
 
         por_conversacion[conversacion_id] = validada
         filas.append({
@@ -121,6 +127,7 @@ def ejecutar(
         "extraccion_reusadas": len(conversaciones) - nuevas,
         "extraccion_respaldo": len(getattr(extractor, "resueltas_por_respaldo", ())),
         "leads_con_senales": len(senales),
+        "evidencia_sin_respaldo": sin_respaldo,
         # Métricas del LLM; con el extractor por reglas quedan en cero.
         "llamadas_llm": getattr(extractor, "llamadas", 0),
         "errores_llm": getattr(extractor, "errores", 0),
