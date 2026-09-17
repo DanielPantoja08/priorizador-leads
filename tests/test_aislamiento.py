@@ -5,7 +5,8 @@ base no está en ejecución o faltan las credenciales de demostración, la prueb
 fallar, para que `pytest` siga siendo verde en una máquina sin Docker.
 
 Comprueba lo que promete HU-05: que un usuario de EMP-01 no puede ver filas de otra empresa ni
-desde la app ni consultando directamente con su sesión, y que un asesor solo ve sus propios leads.
+desde la app ni consultando directamente con su sesión, y que un asesor solo ve sus propios leads,
+también en las tablas base: clientes, conversaciones, mensajes, extracciones y puntajes.
 """
 
 from __future__ import annotations
@@ -107,3 +108,59 @@ def test_el_usuario_no_puede_escribir(sesion_gerente_emp01) -> None:
 
     with pytest.raises(APIError):
         sesion_gerente_emp01.table("lead").insert({"lead_id": "LD-PRUEBA"}).execute()
+
+
+# --------------------------------------------------------------------------------------
+# Mínimo privilegio del asesor en las tablas base
+# --------------------------------------------------------------------------------------
+
+
+def todas(sesion, tabla: str, columnas: str) -> list[dict]:
+    """Todas las filas visibles, página por página: una tabla puede pasar de 1.000 filas."""
+    filas, paso = [], 1000
+    while True:
+        pagina = sesion.table(tabla).select(columnas).range(len(filas), len(filas) + paso - 1)
+        datos = pagina.execute().data
+        filas.extend(datos)
+        if len(datos) < paso:
+            return filas
+
+
+def test_el_asesor_solo_ve_los_leads_de_sus_clientes(
+    sesion_asesor_emp01, sesion_gerente_emp01
+) -> None:  # noqa: E501
+    asignados = {f["lead_id"] for f in todas(sesion_asesor_emp01, "asignacion", "lead_id")}
+    leads = todas(sesion_asesor_emp01, "lead", "lead_id, cliente_id")
+    clientes = {f["cliente_id"] for f in leads if f["lead_id"] in asignados}
+    assert asignados <= {f["lead_id"] for f in leads}, "el asesor no ve un lead que tiene asignado"
+    # Los demás leads visibles son de esos mismos clientes (otros canales de la misma persona).
+    assert {f["cliente_id"] for f in leads} == clientes
+    assert len(leads) < len(todas(sesion_gerente_emp01, "lead", "lead_id"))
+    visibles = {f["cliente_id"] for f in todas(sesion_asesor_emp01, "cliente", "cliente_id")}
+    assert visibles == clientes
+
+
+@pytest.mark.parametrize("tabla", ["score", "senales_lead", "conversacion"])
+def test_lo_que_cuelga_de_un_lead_sigue_al_lead(sesion_asesor_emp01, tabla: str) -> None:
+    leads = {f["lead_id"] for f in todas(sesion_asesor_emp01, "lead", "lead_id")}
+    filas = todas(sesion_asesor_emp01, tabla, "lead_id")
+    assert filas, f"{tabla} no devolvió filas: la prueba no estaría comprobando nada"
+    assert {f["lead_id"] for f in filas} <= leads
+
+
+@pytest.mark.parametrize("tabla", ["mensaje", "extraccion"])
+def test_mensajes_y_extracciones_siguen_a_la_conversacion(sesion_asesor_emp01, tabla: str) -> None:
+    conversaciones = {
+        f["conversacion_id"] for f in todas(sesion_asesor_emp01, "conversacion", "conversacion_id")
+    }
+    filas = todas(sesion_asesor_emp01, tabla, "conversacion_id")
+    assert filas
+    assert {f["conversacion_id"] for f in filas} <= conversaciones
+
+
+@pytest.mark.parametrize("tabla", ["historico_cierre", "problema_calidad"])
+def test_el_historico_y_la_calidad_son_del_gerente(
+    sesion_asesor_emp01, sesion_gerente_emp01, tabla: str
+) -> None:
+    assert sesion_gerente_emp01.table(tabla).select("empresa_id").limit(1).execute().data
+    assert not sesion_asesor_emp01.table(tabla).select("empresa_id").limit(1).execute().data
