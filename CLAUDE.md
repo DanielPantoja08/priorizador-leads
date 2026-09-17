@@ -21,7 +21,7 @@ supabase db reset                    # aplica migraciones y seed.sql
 uv run python -m eda                 # regenera docs/EDA.md y docs/img/eda/
 uv run python -m pipeline run --fecha-corte 2026-09-10
 uv run python scripts/crear_usuarios_demo.py   # después del pipeline (el asesor demo debe existir)
-uv run python -m pipeline eval          # y validate-scoring, simulate-policy
+uv run python -m pipeline eval          # y eval-robustness, validate-scoring, simulate-policy
 uv run streamlit run app/streamlit_app.py
 ```
 Antes de cada commit: `uv run ruff check .`, `uv run ruff format .` y `uv run pytest -q`.
@@ -143,7 +143,8 @@ docs/              enunciado.pdf, PRD.md, TRD.md, EDA.md, img/
   - `orden` es por asesor: en la vista de empresa se muestra el asesor y se ordena por prioridad.
   - La contraseña de demostración no se teclea en el navegador.
 - **Revisión contra el enunciado**: `docs/arquitectura.md`, README con supuestos y API, 40 asesores
-  y 3 gerentes, frase de apertura sin LLM, `simulate-policy` (70 %: +9 cierres, +6,2 %). 279 pruebas.
+  y 3 gerentes, frase de apertura sin LLM, `simulate-policy` (70 %: +9 cierres, +6,2 %). 298 pruebas.
+- `eval-robustness`: 97 frases fijas; reformuladas, reglas 99,4 → 87,2 %, Gemini 97,5–98,6 %. Falta revisión humana.
 - **Fase F**: repo público, Supabase remoto (sa-east-1, session pooler 5432), workflow verde a mano y
   https://priorizador-leads.streamlit.app con aislamiento verificado. Credenciales en `.env.remoto`
   (ignorado). `setup-uv` sin etiqueta mayor: versión exacta. Falta: cron verde y presentación.
