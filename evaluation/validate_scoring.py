@@ -24,6 +24,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -55,12 +56,8 @@ def preparar(historico: pd.DataFrame) -> pd.DataFrame:
     """Aplica el componente A sobre el histórico gestionado y marca la ventana de prueba."""
     df = historico[historico["desenlace"] != SIN_GESTION].copy()
     df["cerrado"] = (df["desenlace"] == "Cerrado").astype(int)
-    df["puntos"] = (
-        PESOS_CALIDAD["cita"] * df["pidio_cita"].astype(int)
-        + PESOS_CALIDAD["cuota"] * df["manifesto_cuota_inicial"].eq("SI").astype(int)
-        + PESOS_CALIDAD["precio_alto"] * df["precio_lista"].ge(PRECIO_ALTO).astype(int)
-        + PESOS_CALIDAD["contado"] * df["forma_pago_declarada"].eq("contado").astype(int)
-    )
+    presentes = senales(df)  # mismas claves que PESOS_CALIDAD
+    df["puntos"] = sum(peso * presentes[clave] for clave, peso in PESOS_CALIDAD.items())
     df["temperatura"] = df["puntos"].map(temperatura_de)
     df["prueba"] = df["fecha_registro"] >= CORTE_TEMPORAL
     return df
@@ -132,6 +129,27 @@ def intervalo_razon(
     return float(bajo), float(alto)
 
 
+def auc_pesos_de_entrenamiento(entrenamiento: pd.DataFrame, prueba: pd.DataFrame) -> float:
+    """AUC en prueba de unos pesos que no vieron la prueba: la alternativa a los pesos v1.
+
+    Una regresión logística sobre las mismas cuatro señales del componente A, ajustada solo con el
+    entrenamiento. Si ordena peor que v1 en la prueba, recalcular los pesos no aporta.
+    """
+    columnas = list(PESOS_CALIDAD)
+    modelo = LogisticRegression().fit(senales(entrenamiento)[columnas], entrenamiento["cerrado"])
+    return roc_auc_score(prueba["cerrado"], modelo.predict_proba(senales(prueba)[columnas])[:, 1])
+
+
+def senales(df: pd.DataFrame) -> pd.DataFrame:
+    """Las cuatro señales del componente A como columnas 0/1."""
+    return pd.DataFrame({
+        "cita": df["pidio_cita"].astype(int),
+        "cuota": df["manifesto_cuota_inicial"].eq("SI").astype(int),
+        "precio_alto": df["precio_lista"].ge(PRECIO_ALTO).astype(int),
+        "contado": df["forma_pago_declarada"].eq("contado").astype(int),
+    })  # fmt: skip
+
+
 def main() -> int:
     """Imprime el informe y devuelve 0 si el puntaje cumple el criterio, o 1 si no lo cumple."""
     df = preparar(normalizar_historico(leer_csv("historico_cierres.csv")))
@@ -148,6 +166,10 @@ def main() -> int:
         f"\nAUC: {coma(auc_entrenamiento, 3)} en entrenamiento y {coma(auc_prueba, 3)} en prueba."
     )
     print("El puntaje ordena, no predice con certeza: un AUC cercano a 0,6 es ordenamiento débil.")
+    print(
+        f"Pesos derivados solo del entrenamiento (regresión logística con las mismas cuatro "
+        f"señales): AUC {coma(auc_pesos_de_entrenamiento(entrenamiento, prueba), 3)} en prueba."
+    )
 
     razon = razon_caliente_frio(prueba)
     bajo, alto = intervalo_razon(prueba)
