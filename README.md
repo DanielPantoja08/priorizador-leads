@@ -220,6 +220,7 @@ uv run python -m pipeline run --fecha-corte 2026-09-10
 uv run python scripts/crear_usuarios_demo.py   # después del pipeline
 
 uv run python -m pipeline eval --con-gemini    # evalúa la extracción
+uv run python -m pipeline eval-robustness --con-gemini   # la misma, con frases reformuladas
 uv run python -m pipeline validate-scoring     # valida el puntaje contra el histórico
 uv run python -m pipeline simulate-policy      # mide los cierres que captura priorizar
 uv run streamlit run app/streamlit_app.py
@@ -235,8 +236,10 @@ mostrar con cualquier asesor y no solo con uno. La contraseña es la de `DEMO_PA
 comparte fuera del repositorio.
 
 Antes de cada commit: `uv run ruff check .`, `uv run ruff format .` y `uv run pytest -q`
-(**279 pruebas**; ninguna llama a servicios externos, salvo la de aislamiento, que usa el Supabase
-local y se omite sola si no está en ejecución).
+(**298 pruebas**; ninguna llama a servicios externos). Dos usan el Supabase local y se omiten solas
+si no está en ejecución: la de aislamiento y la de interfaz. Esta última pide los leads con las
+mismas funciones de la app y la ejecuta con `AppTest`: inicia sesión como asesor y abre el detalle de
+todos sus leads.
 
 ### Despliegue
 
