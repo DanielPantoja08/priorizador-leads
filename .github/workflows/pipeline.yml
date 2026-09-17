@@ -1,10 +1,15 @@
 # Corre el pipeline completo contra el Supabase remoto (TRD 11.3).
 # Es el mismo comando que en local: solo cambian las variables, que llegan de GitHub Secrets.
+# Estilo y pruebas viven en ci.yml: aquí no bloquean la lista del día.
 name: pipeline-leads
 
 on:
   schedule:
     - cron: "0 11 * * *" # 06:00 America/Bogota (GitHub usa UTC)
+  # Llegan insumos nuevos: la lista se recalcula sin esperar al día siguiente.
+  push:
+    branches: [main]
+    paths: ["data/raw/**"]
   workflow_dispatch:
     inputs:
       fecha_corte:
@@ -23,6 +28,7 @@ concurrency:
 
 permissions:
   contents: read
+  issues: write # para abrir el aviso cuando la corrida falla
 
 jobs:
   run:
@@ -34,7 +40,7 @@ jobs:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash-lite' }}
-      # En el cron no hay entradas: se cae a los valores por defecto.
+      # En el cron y en el push no hay entradas: se cae a los valores por defecto.
       EXTRACTOR: ${{ inputs.extractor || 'gemini' }}
       FECHA_CORTE: ${{ inputs.fecha_corte }}
     steps:
@@ -42,13 +48,15 @@ jobs:
       - uses: astral-sh/setup-uv@v10.1.0 # sin etiqueta mayor flotante desde la v8
       - name: Instalar el entorno bloqueado por uv.lock
         run: uv sync --frozen
-      - name: Revisar estilo
-        run: uv run ruff check .
-      # Sin credenciales de Supabase, la prueba de aislamiento se omite: el resto no usa red.
-      - name: Pruebas
-        run: uv run pytest -q
       - name: Correr el pipeline
         run: uv run python -m pipeline run
-      # Sale con código distinto de cero si el puntaje deja de cumplir el criterio (TRD 9.3).
-      - name: Validar el puntaje
-        run: uv run python -m pipeline validate-scoring
+      # Si el Gemini falla, la corrida termina con el respaldo por reglas y no llega aquí: esto es
+      # para lo que deja la lista del día sin publicar (base caída, insumo ilegible...).
+      - name: Avisar del fallo
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh issue create --repo "$GITHUB_REPOSITORY"
+          --title "Falló el pipeline de leads ($(date -u +%F))"
+          --body "La lista del día no se publicó. Corrida: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
