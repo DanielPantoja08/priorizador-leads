@@ -4,8 +4,11 @@
 name: pipeline-leads
 
 on:
+  # El disparo principal es pg_cron en Supabase a las 06:17 (migración disparo_diario_pipeline), que
+  # llama a workflow_dispatch: el cron de GitHub no garantiza la hora y aquí no llegó a disparar.
+  # Este queda de respaldo, media hora después; si corren los dos, la lista sale igual (idempotente).
   schedule:
-    - cron: "7 17 * * *" # 12:07 America/Bogota (GitHub usa UTC); temporal para validar el cron
+    - cron: "47 11 * * *" # 06:47 America/Bogota (GitHub usa UTC)
   # Llegan insumos nuevos: la lista se recalcula sin esperar al día siguiente.
   push:
     branches: [main]
@@ -20,6 +23,12 @@ on:
         type: choice
         options: [gemini, reglas]
         default: gemini
+      # Lo envía el cron de Supabase para que la base registre la corrida como supabase_cron.
+      disparador:
+        description: "manual | supabase_cron"
+        type: choice
+        options: [manual, supabase_cron]
+        default: manual
 
 # Dos corridas a la vez escribirían la misma lista: la segunda espera a que termine la primera.
 concurrency:
@@ -43,6 +52,7 @@ jobs:
       # En el cron y en el push no hay entradas: se cae a los valores por defecto.
       EXTRACTOR: ${{ inputs.extractor || 'gemini' }}
       FECHA_CORTE: ${{ inputs.fecha_corte }}
+      DISPARADOR: ${{ inputs.disparador }}
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.1.0 # sin etiqueta mayor flotante desde la v8
