@@ -9,6 +9,7 @@ tuviera un error de filtrado, la base seguiría sin devolver filas de otra empre
 
 from __future__ import annotations
 
+import importlib
 import sys
 from collections.abc import Callable
 from datetime import date, datetime
@@ -23,7 +24,13 @@ RAIZ = Path(__file__).resolve().parent.parent
 if str(RAIZ) not in sys.path:
     sys.path.insert(0, str(RAIZ))
 
-from pipeline.extract.evidencia import campos_sin_respaldo  # noqa: E402  (solo biblioteca estándar)
+from pipeline.extract import evidencia  # noqa: E402  (solo biblioteca estándar)
+
+# Streamlit Cloud actualiza el repositorio y vuelve a correr ESTE archivo, pero no reinicia el
+# proceso: los módulos ya importados se quedan en la versión anterior. Si cambian a la vez la app y
+# `evidencia`, la app nueva llamaría a la función vieja y fallaría. Recargarlo en cada corrida evita
+# esa mezcla; el módulo es pequeño y solo usa la biblioteca estándar.
+evidencia = importlib.reload(evidencia)
 
 TITULO = "Priorizador Diario de Leads"
 
@@ -166,16 +173,16 @@ def lineas_de_evidencia(fila: dict, mensajes: pd.DataFrame) -> list[str]:
     Solo se cita entre comillas lo que aparece de verdad en esa conversación, dicho por quien
     corresponde. Un fragmento inventado, del asesor o de otro chat se avisa sin citarlo.
     """
-    evidencia = fila.get("evidencia") or {}
+    citas = fila.get("evidencia") or {}
     suyos = []
     if not mensajes.empty:
         suyos = mensajes[mensajes["conversacion_id"] == fila["conversacion_id"]].to_dict("records")
-    sin_respaldo = set(campos_sin_respaldo(evidencia, suyos))
+    sin_respaldo = set(evidencia.campos_sin_respaldo(citas, suyos))
     return [
         f"- `{campo}`: *no aparece en la conversación; no se cita*"
         if campo in sin_respaldo
         else f"- `{campo}`: «{fragmento}»"
-        for campo, fragmento in evidencia.items()
+        for campo, fragmento in citas.items()
         if fragmento
     ]
 

@@ -70,6 +70,18 @@ def test_la_app_solo_cita_lo_que_tiene_respaldo_en_esa_conversacion() -> None:
     assert "no se cita" in lineas[1] and "centrales" not in lineas[1]
 
 
+def test_la_app_llama_a_la_version_recargada_del_modulo() -> None:
+    """Streamlit Cloud no reinicia el proceso al actualizar el repositorio.
+
+    La app se vuelve a correr con el código nuevo, pero los módulos importados siguen en la versión
+    anterior. Por eso llama a `evidencia.campos_sin_respaldo` a través del módulo, que recarga al
+    arrancar: si tomara la función en el `import`, se quedaría con la vieja y fallaría.
+    """
+    import app.streamlit_app as app
+
+    assert app.lineas_de_evidencia.__globals__["evidencia"].campos_sin_respaldo
+
+
 def test_el_encabezado_de_la_transcripcion_no_cuenta_como_parte_de_la_cita() -> None:
     # El modelo ve «asesor [10:49]: texto» y a veces copia la línea entera.
     evidencia = {"cliente_respondio": f"asesor [10:49]: {ASESOR}"}
